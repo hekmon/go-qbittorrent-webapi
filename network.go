@@ -12,10 +12,14 @@ const (
 	apiPrefix = "api/v2"
 )
 
-func (c *Controller) request(ctx context.Context, method, APIName, methodName string, output interface{}) (err error) {
+func (c *Controller) requestAutoLogin(ctx context.Context, method, APIName, APIMethodName string, output interface{}) (err error) {
+	return c.request(ctx, method, APIName, APIMethodName, output, false)
+}
+
+func (c *Controller) request(ctx context.Context, method, APIName, APIMethodName string, output interface{}, lastTry bool) (err error) {
 	// build URL
 	requestURL := *c.url
-	requestURL.Path = fmt.Sprintf("%s/%s/%s/%s", requestURL.Path, apiPrefix, APIName, methodName)
+	requestURL.Path = fmt.Sprintf("%s/%s/%s/%s", requestURL.Path, apiPrefix, APIName, APIMethodName)
 	// build request
 	request, err := http.NewRequest(method, requestURL.String(), nil)
 	if err != nil {
@@ -30,7 +34,20 @@ func (c *Controller) request(ctx context.Context, method, APIName, methodName st
 		return
 	}
 	defer response.Body.Close()
-	if response.StatusCode != http.StatusOK {
+	switch response.StatusCode {
+	case http.StatusOK:
+		// proceed
+	case http.StatusForbidden:
+		if lastTry {
+			err = HTTPError(response.StatusCode)
+			return
+		}
+		response.Body.Close() // don't leave it hanging, early close
+		// try to login
+		/// TODO
+		// re issue request now that we are authed
+		return c.request(ctx, method, APIName, APIMethodName, output, true)
+	default:
 		err = HTTPError(response.StatusCode)
 		return
 	}
