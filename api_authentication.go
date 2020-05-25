@@ -21,6 +21,7 @@ const (
 // Login performs a login against the remote qBittorrent server.
 // If successfull a cookie will be set in the http client and will be used for any other methods.
 // Note that you do not need to call login yourself as it is called automatically if necessary.
+// https://github.com/qbittorrent/qBittorrent/wiki/Web-API-Documentation#login
 func (c *Controller) Login(ctx context.Context) (err error) {
 	// build URL
 	authURL := *c.url
