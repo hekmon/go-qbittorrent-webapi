@@ -15,7 +15,7 @@ import (
 */
 
 const (
-	authenticationPrefix = "auth"
+	authenticationAPIName = "auth"
 )
 
 // Login performs a login against the remote qBittorrent server.
@@ -25,7 +25,7 @@ const (
 func (c *Controller) Login(ctx context.Context) (err error) {
 	// build URL
 	authURL := *c.url
-	authURL.Path = fmt.Sprintf("%s/%s/%s/%s", authURL.Path, apiPrefix, authenticationPrefix, "login")
+	authURL.Path = fmt.Sprintf("%s/%s/%s/%s", authURL.Path, apiPrefix, authenticationAPIName, "login")
 	// build payload
 	payload := url.Values{}
 	payload.Set("username", c.user)
