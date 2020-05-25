@@ -44,7 +44,9 @@ func (c *Controller) request(ctx context.Context, method, APIName, APIMethodName
 		}
 		response.Body.Close() // don't leave it hanging, early close
 		// try to login
-		/// TODO
+		if err = c.Login(ctx); err != nil {
+			return
+		}
 		// re issue request now that we are authed
 		return c.request(ctx, method, APIName, APIMethodName, output, true)
 	default:
