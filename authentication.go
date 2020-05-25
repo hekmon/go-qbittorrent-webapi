@@ -50,7 +50,7 @@ func (c *Controller) Login(ctx context.Context) (err error) {
 	if err != nil {
 		return
 	}
-	defer response.Body.Close()
+	response.Body.Close()
 	if response.StatusCode != http.StatusOK {
 		err = HTTPError(response.StatusCode)
 	}
