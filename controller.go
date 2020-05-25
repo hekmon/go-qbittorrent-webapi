@@ -4,9 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/http/cookiejar"
 	"net/url"
 
 	"github.com/hashicorp/go-cleanhttp"
+	"golang.org/x/net/publicsuffix"
 )
 
 // New return a initialized and ready to use Controller.
@@ -25,6 +27,15 @@ func New(apiEndpoint *url.URL, user, password string, customHTTPClient *http.Cli
 	// handle http client
 	if customHTTPClient == nil {
 		customHTTPClient = cleanhttp.DefaultPooledClient()
+	}
+	// create the cookie jar if needed
+	if customHTTPClient.Jar == nil {
+		customHTTPClient.Jar, err = cookiejar.New(&cookiejar.Options{
+			PublicSuffixList: publicsuffix.List,
+		})
+		if err != nil {
+			return
+		}
 	}
 	// spawn the controller
 	c = &Controller{
