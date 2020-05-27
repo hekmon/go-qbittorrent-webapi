@@ -20,7 +20,10 @@ const (
 // https://github.com/qbittorrent/qBittorrent/wiki/Web-API-Documentation#login
 func (c *Controller) Login(ctx context.Context) (err error) {
 	// Build request
-	req, err := c.requestBuild(ctx, "POST", authenticationAPIName, "login", nil)
+	req, err := c.requestBuild(ctx, "POST", authenticationAPIName, "login", map[string]string{
+		"username": c.user,
+		"password": c.password,
+	})
 	if err != nil {
 		return fmt.Errorf("building request failed: %w", err)
 	}
@@ -29,7 +32,7 @@ func (c *Controller) Login(ctx context.Context) (err error) {
 	if c.url.Port() != "" {
 		origin += ":" + c.url.Port()
 	}
-	req.request.Header.Set("Origin", origin)
+	req.Header.Set("Origin", origin)
 	// execute auth request
 	if err = c.requestExecute(ctx, req, nil, false); err != nil {
 		err = fmt.Errorf("executing request failed: %w", err)

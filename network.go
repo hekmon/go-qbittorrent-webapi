@@ -3,7 +3,6 @@ package qbtapi
 import (
 	"context"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -16,43 +15,36 @@ const (
 	apiPrefix = "api/v2"
 )
 
-type request struct {
-	request *http.Request
-	payload *strings.Reader
-}
-
-func (c *Controller) requestBuild(ctx context.Context, method, APIName, APIMethodName string, input map[string]string) (req request, err error) {
+func (c *Controller) requestBuild(ctx context.Context, method, APIName, APIMethodName string, input map[string]string) (request *http.Request, err error) {
 	// build URL
 	requestURL := *c.url
 	requestURL.Path = fmt.Sprintf("%s/%s/%s/%s", requestURL.Path, apiPrefix, APIName, APIMethodName)
 	// build payload
-	var reqPayloadSize int
+	var reqPayload string
 	if method == "POST" && input != nil {
-		payloadValues := url.Values{}
+		payloadValues := make(url.Values, len(input))
 		for key, value := range input {
 			payloadValues.Set(key, value)
 		}
-		payloadSerialized := payloadValues.Encode()
-		reqPayloadSize = len(payloadSerialized)
-		req.payload = strings.NewReader(payloadSerialized)
+		reqPayload = payloadValues.Encode()
 	}
 	// build http request
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	if req.request, err = http.NewRequestWithContext(ctx, method, requestURL.String(), req.payload); err != nil {
+	if request, err = http.NewRequestWithContext(ctx, method, requestURL.String(), strings.NewReader(reqPayload)); err != nil {
 		return
 	}
-	if req.payload != nil {
-		req.request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		req.request.Header.Set("Content-Length", strconv.Itoa(reqPayloadSize))
+	if reqPayload != "" {
+		request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		request.Header.Set("Content-Length", strconv.Itoa(len(reqPayload)))
 	}
 	return
 }
 
-func (c *Controller) requestExecute(ctx context.Context, req request, output interface{}, autoAuth bool) (err error) {
+func (c *Controller) requestExecute(ctx context.Context, request *http.Request, output interface{}, autoAuth bool) (err error) {
 	// execute request
-	response, err := c.client.Do(req.request)
+	response, err := c.client.Do(request)
 	if err != nil {
 		err = fmt.Errorf("HTTP request failure: %w", err)
 		return
@@ -62,22 +54,24 @@ func (c *Controller) requestExecute(ctx context.Context, req request, output int
 	case http.StatusOK:
 		// proceed
 	case http.StatusForbidden:
+		// is this iteration allow to auto login ?
 		if !autoAuth {
 			err = HTTPError(response.StatusCode)
 			return
 		}
-		response.Body.Close() // don't leave it hanging, early close
 		// try to login
+		response.Body.Close() // don't leave it hanging, early close
 		if err = c.Login(ctx); err != nil {
 			err = fmt.Errorf("auto login failed: %w", err)
 			return
 		}
+		fmt.Println("autologged!")
 		// reset payload reader & reissue request now that we are auth
-		if _, err = req.payload.Seek(0, io.SeekStart); err != nil {
-			err = fmt.Errorf("auto login succeeded but reseting original request payload failed: %w", err)
+		if request.Body, err = request.GetBody(); err != nil {
+			err = fmt.Errorf("can't reset body of original query after successfull autologin: %w", err)
 			return
 		}
-		return c.requestExecute(ctx, req, output, false)
+		return c.requestExecute(ctx, request, output, false)
 	default:
 		err = HTTPError(response.StatusCode)
 		return
