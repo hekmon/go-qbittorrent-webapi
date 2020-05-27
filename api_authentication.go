@@ -3,10 +3,6 @@ package qbtapi
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"net/url"
-	"strconv"
-	"strings"
 )
 
 /*
@@ -19,41 +15,40 @@ const (
 )
 
 // Login performs a login against the remote qBittorrent server.
-// If successfull a cookie will be set in the http client and will be used for any other methods.
+// If successfull, a cookie will be set within the http client and will be used for any further methods calls.
 // Note that you do not need to call login yourself as it is called automatically if necessary.
 // https://github.com/qbittorrent/qBittorrent/wiki/Web-API-Documentation#login
 func (c *Controller) Login(ctx context.Context) (err error) {
-	// build URL
-	authURL := *c.url
-	authURL.Path = fmt.Sprintf("%s/%s/%s/%s", authURL.Path, apiPrefix, authenticationAPIName, "login")
-	// build payload
-	payload := url.Values{}
-	payload.Set("username", c.user)
-	payload.Set("password", c.password)
-	payloadSerialized := payload.Encode()
-	// build request
-	request, err := http.NewRequest("POST", authURL.String(), strings.NewReader(payloadSerialized))
+	// Build request
+	req, err := c.requestBuild(ctx, "POST", authenticationAPIName, "login", nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("building request failed: %w", err)
 	}
-	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	request.Header.Set("Content-Length", strconv.Itoa(len(payloadSerialized)))
-	referer := fmt.Sprintf("%s://%s", authURL.Scheme, authURL.Hostname())
-	if authURL.Port() != "" {
-		referer += ":" + authURL.Port()
+	// Add custom header for login
+	origin := fmt.Sprintf("%s://%s", c.url.Scheme, c.url.Hostname())
+	if c.url.Port() != "" {
+		origin += ":" + c.url.Port()
 	}
-	request.Header.Set("Referer", referer)
-	if ctx != nil {
-		request = request.WithContext(ctx)
+	req.request.Header.Set("Origin", origin)
+	// execute auth request
+	if err = c.requestExecute(ctx, req, nil, false); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
 	}
-	// execute request
-	response, err := c.client.Do(request)
+	return
+}
+
+// Logout performs a clean logout against the server, effectively cleaning upstream (and local) cookie.
+// Recommended to call before exiting to leave a clean server state.
+// https://github.com/qbittorrent/qBittorrent/wiki/Web-API-Documentation#logout
+func (c *Controller) Logout(ctx context.Context) (err error) {
+	// Build request
+	req, err := c.requestBuild(ctx, "GET", authenticationAPIName, "logout", nil)
 	if err != nil {
-		return
+		return fmt.Errorf("request building failure: %w", err)
 	}
-	response.Body.Close()
-	if response.StatusCode != http.StatusOK {
-		err = HTTPError(response.StatusCode)
+	// execute auth request
+	if err = c.requestExecute(ctx, req, nil, false); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
 	}
 	return
 }
