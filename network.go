@@ -65,7 +65,6 @@ func (c *Controller) requestExecute(ctx context.Context, request *http.Request, 
 			err = fmt.Errorf("auto login failed: %w", err)
 			return
 		}
-		fmt.Println("autologged!")
 		// reset payload reader & reissue request now that we are auth
 		if request.Body, err = request.GetBody(); err != nil {
 			err = fmt.Errorf("can't reset body of original query after successfull autologin: %w", err)
