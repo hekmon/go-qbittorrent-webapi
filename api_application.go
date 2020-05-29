@@ -64,3 +64,17 @@ func (c *Controller) GetBuildInfo(ctx context.Context) (infos BuildInfo, err err
 	}
 	return
 }
+
+// Shutdown stops the remote server.
+// https://github.com/qbittorrent/qBittorrent/wiki/Web-API-Documentation#shutdown-application
+func (c *Controller) Shutdown(ctx context.Context) (err error) {
+	req, err := c.requestBuild(ctx, "POST", applicationAPIName, "shutdown", nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(ctx, req, nil, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
