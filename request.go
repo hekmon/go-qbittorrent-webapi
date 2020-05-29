@@ -2,6 +2,7 @@ package qbtapi
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -12,7 +13,12 @@ import (
 )
 
 const (
-	apiPrefix = "api/v2"
+	apiPrefix                  = "api/v2"
+	contentLenHeader           = "Content-Length"
+	contentTypeHeader          = "Content-Type"
+	contentTypeHeaderFormURL   = "application/x-www-form-urlencoded"
+	contentTypeHeaderTextPlain = "text/plain"
+	contentTypeHeaderJSON      = "application/json"
 )
 
 func (c *Controller) requestBuild(ctx context.Context, method, APIName, APIMethodName string, input map[string]string) (request *http.Request, err error) {
@@ -36,8 +42,8 @@ func (c *Controller) requestBuild(ctx context.Context, method, APIName, APIMetho
 		return
 	}
 	if reqPayload != "" {
-		request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		request.Header.Set("Content-Length", strconv.Itoa(len(reqPayload)))
+		request.Header.Set(contentTypeHeader, contentTypeHeaderFormURL)
+		request.Header.Set(contentLenHeader, strconv.Itoa(len(reqPayload)))
 	}
 	return
 }
@@ -75,20 +81,53 @@ func (c *Controller) requestExecute(ctx context.Context, request *http.Request, 
 		err = HTTPError(response.StatusCode)
 		return
 	}
-	// handle body if needed
+	// handle body
+	return c.requestExtract(response, output)
+}
+
+func (c *Controller) requestExtract(response *http.Response, output interface{}) (err error) {
+	// Pre checks
 	if output == nil {
+		// caller does not care about body
 		return
 	}
-	switch typedOutput := output.(type) {
-	case *string:
+	if reflect.TypeOf(output).Kind() != reflect.Ptr {
+		return InternalError(fmt.Sprintf("output must be a pointer (currentlyu: %v)",
+			reflect.TypeOf(output)))
+	}
+	// Given the response body content type
+	switch response.Header.Get(contentTypeHeader) {
+	// text-plain
+	case contentTypeHeaderTextPlain:
+		// output must be a string pointer
+		if reflect.Indirect(reflect.ValueOf(output)).Kind() != reflect.String {
+			return InternalError(fmt.Sprintf("output should be a string pointer when %s is '%s' (currently: %v)",
+				contentTypeHeader, contentTypeHeaderTextPlain, reflect.TypeOf(output)))
+		}
+		// extract it
 		var bodyData []byte
 		if bodyData, err = ioutil.ReadAll(response.Body); err != nil {
 			err = fmt.Errorf("reading answer body failed: %w", err)
 			return
 		}
-		*typedOutput = string(bodyData)
+		*output.(*string) = string(bodyData)
+	// application/json
+	case contentTypeHeaderJSON:
+		// output must be a struct or a slice pointer
+		switch reflect.Indirect(reflect.ValueOf(output)).Kind() {
+		case reflect.Struct:
+		case reflect.Slice:
+		default:
+			return InternalError(fmt.Sprintf("when %s is '%s' output should be a struct pointer or a slice pointer (currently: %v)",
+				contentTypeHeader, contentTypeHeaderJSON, reflect.TypeOf(output)))
+		}
+		// decode as JSON
+		if err = json.NewDecoder(response.Body).Decode(output); err != nil {
+			return fmt.Errorf("decody response body as JSON failed: %w", err)
+		}
 	default:
-		err = fmt.Errorf("request succeeded but output type is not supported: %v", reflect.TypeOf(output))
+		return InternalError(fmt.Sprintf("%s value '%s' is not supported",
+			contentTypeHeader, response.Header.Get(contentTypeHeader)))
 	}
 	return
 }
@@ -98,4 +137,11 @@ type HTTPError int
 
 func (he HTTPError) Error() string {
 	return fmt.Sprintf("%d %s", int(he), http.StatusText(int(he)))
+}
+
+// InternalError is an error that should not happen: if you encounter one, please open a bug report !
+type InternalError string
+
+func (ie InternalError) Error() string {
+	return fmt.Sprintf("internal error: %s", string(ie))
 }

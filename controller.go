@@ -11,6 +11,11 @@ import (
 	"golang.org/x/net/publicsuffix"
 )
 
+const (
+	// APIReferenceVersion contains the version of the API this libs is built against
+	APIReferenceVersion = "2.5.1"
+)
+
 // New return a initialized and ready to use Controller.
 // customHTTPClient can be nil
 func New(apiEndpoint *url.URL, user, password string, customHTTPClient *http.Client) (c *Controller, err error) {
