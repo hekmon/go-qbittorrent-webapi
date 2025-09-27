@@ -14,13 +14,14 @@ import (
 )
 
 const (
-	apiPrefix                  = "api/v2"
-	originHeader               = "Origin"
-	contentLenHeader           = "Content-Length"
-	contentTypeHeader          = "Content-Type"
-	contentTypeHeaderFormURL   = "application/x-www-form-urlencoded"
-	contentTypeHeaderTextPlain = "text/plain"
-	contentTypeHeaderJSON      = "application/json"
+	apiPrefix                     = "api/v2"
+	originHeader                  = "Origin"
+	contentLenHeader              = "Content-Length"
+	contentTypeHeader             = "Content-Type"
+	contentTypeHeaderFormURL      = "application/x-www-form-urlencoded"
+	contentTypeHeaderTextPlain    = "text/plain"
+	contentTypeHeaderTextPlanUTF8 = "text/plain; charset=UTF-8"
+	contentTypeHeaderJSON         = "application/json"
 )
 
 func (c *Client) requestBuild(ctx context.Context, method, APIName, APIMethodName string, input map[string]string) (request *http.Request, err error) {
@@ -28,22 +29,23 @@ func (c *Client) requestBuild(ctx context.Context, method, APIName, APIMethodNam
 	requestURL := *c.url
 	requestURL.Path = path.Join(requestURL.Path, apiPrefix, APIName, APIMethodName)
 	// build payload
-	var reqPayload string
+	var (
+		body       io.Reader
+		reqPayload string
+	)
 	if method == "POST" && input != nil {
 		payloadValues := make(url.Values, len(input))
 		for key, value := range input {
 			payloadValues.Set(key, value)
 		}
 		reqPayload = payloadValues.Encode()
+		body = strings.NewReader(reqPayload)
 	}
 	// build http request
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	if request, err = http.NewRequestWithContext(ctx, method, requestURL.String(), strings.NewReader(reqPayload)); err != nil {
+	if request, err = http.NewRequestWithContext(ctx, method, requestURL.String(), body); err != nil {
 		return
 	}
-	if reqPayload != "" {
+	if body != nil {
 		request.Header.Set(contentTypeHeader, contentTypeHeaderFormURL)
 		request.Header.Set(contentLenHeader, strconv.Itoa(len(reqPayload)))
 	}
@@ -87,7 +89,7 @@ func (c *Client) requestExecute(ctx context.Context, request *http.Request, outp
 	return c.requestExtract(response, output)
 }
 
-func (c *Client) requestExtract(response *http.Response, output interface{}) (err error) {
+func (c *Client) requestExtract(response *http.Response, output any) (err error) {
 	// Pre checks
 	if output == nil {
 		// caller does not care about body
@@ -100,7 +102,7 @@ func (c *Client) requestExtract(response *http.Response, output interface{}) (er
 	// Given the response body content type
 	switch response.Header.Get(contentTypeHeader) {
 	// text-plain
-	case contentTypeHeaderTextPlain:
+	case contentTypeHeaderTextPlain, contentTypeHeaderTextPlanUTF8:
 		// output must be a string pointer
 		if reflect.Indirect(reflect.ValueOf(output)).Kind() != reflect.String {
 			return InternalError(fmt.Sprintf("output should be a string pointer when %s is '%s' (currently: %v)",
