@@ -45,7 +45,7 @@ func (c *Client) Login(ctx context.Context) (err error) {
 // https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#logout
 func (c *Client) Logout(ctx context.Context) (err error) {
 	// Build request
-	req, err := c.requestBuild(ctx, "GET", authenticationAPIName, "logout", nil)
+	req, err := c.requestBuild(ctx, "POST", authenticationAPIName, "logout", nil)
 	if err != nil {
 		return fmt.Errorf("request building failure: %w", err)
 	}
