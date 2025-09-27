@@ -513,3 +513,53 @@ func (c *Client) GetDefaultSavePath(ctx context.Context) (path string, err error
 	}
 	return
 }
+
+// Cookie represents a cookie that is sent by qBittorrent when downloading .torrent files.
+// See https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#get-cookies
+// and https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#set-cookies
+type Cookie struct {
+	Name           string `json:"name,omitempty"`
+	Domain         string `json:"domain,omitempty"`
+	Path           string `json:"path,omitempty"`
+	Value          string `json:"value,omitempty"`
+	ExpirationDate int64  `json:"expirationDate,omitempty"`
+}
+
+// GetCookies returns the cookies that are sent by qBittorrent when downloading .torrent files.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#get-cookies
+func (c *Client) GetCookies(ctx context.Context) (cookies []Cookie, err error) {
+	req, err := c.requestBuild(ctx, "GET", applicationAPIName, "cookies", nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(ctx, req, &cookies, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+// SetCookies sets the cookies that are sent by qBittorrent when downloading .torrent files.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#set-cookies
+func (c *Client) SetCookies(ctx context.Context, cookies []Cookie) (err error) {
+	// First we need to marshal the prefs as json
+	data, err := json.Marshal(cookies)
+	if err != nil {
+		err = fmt.Errorf("marshaling cookies failed: %w", err)
+		return
+	}
+	// Then we can encapsulate it on the expected format
+	payload := map[string]string{
+		"": string(data),
+	}
+	// Continue normally
+	req, err := c.requestBuild(ctx, "POST", applicationAPIName, "setCookies", payload)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(ctx, req, nil, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}

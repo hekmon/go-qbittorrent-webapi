@@ -34,11 +34,16 @@ func (c *Client) requestBuild(ctx context.Context, method, APIName, APIMethodNam
 		reqPayload string
 	)
 	if method == "POST" && input != nil {
-		if len(input) == 1 && input["json"] != "" {
-			// weird qbittorrent implementation: we need to put the json data without encoding it
+		switch {
+		case len(input) == 1 && input[""] != "":
+			// weird qbittorrent implementation: we need to put the json data without encoding it (set cookies ?)
+			reqPayload = input[""]
+			fmt.Println(reqPayload)
+		case len(input) == 1 && input["json"] != "":
+			// weird qbittorrent implementation: we need to put the json data without encoding it (set app prefs)
 			reqPayload = "json=" + input["json"]
 			fmt.Println(reqPayload)
-		} else {
+		default:
 			// regulard url encoded values
 			payloadValues := make(url.Values, len(input))
 			for key, value := range input {
