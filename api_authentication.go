@@ -32,7 +32,7 @@ func (c *Client) Login(ctx context.Context) (err error) {
 	if c.url.Port() != "" {
 		origin += ":" + c.url.Port()
 	}
-	req.Header.Set("Origin", origin)
+	req.Header.Set(originHeader, origin)
 	// execute auth request
 	if err = c.requestExecute(ctx, req, nil, false); err != nil {
 		err = fmt.Errorf("executing request failed: %w", err)

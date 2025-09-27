@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"path"
 	"reflect"
 	"strconv"
 	"strings"
@@ -14,6 +15,7 @@ import (
 
 const (
 	apiPrefix                  = "api/v2"
+	originHeader               = "Origin"
 	contentLenHeader           = "Content-Length"
 	contentTypeHeader          = "Content-Type"
 	contentTypeHeaderFormURL   = "application/x-www-form-urlencoded"
@@ -24,7 +26,7 @@ const (
 func (c *Client) requestBuild(ctx context.Context, method, APIName, APIMethodName string, input map[string]string) (request *http.Request, err error) {
 	// build URL
 	requestURL := *c.url
-	requestURL.Path = fmt.Sprintf("%s/%s/%s/%s", requestURL.Path, apiPrefix, APIName, APIMethodName)
+	requestURL.Path = path.Join(requestURL.Path, apiPrefix, APIName, APIMethodName)
 	// build payload
 	var reqPayload string
 	if method == "POST" && input != nil {

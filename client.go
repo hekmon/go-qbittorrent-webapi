@@ -13,7 +13,7 @@ import (
 
 const (
 	// APIReferenceVersion contains the version of the API this libs is built against
-	APIReferenceVersion = "2.5.1"
+	APIReferenceVersion = "2.11.3"
 )
 
 // New return a initialized and ready to use Client.
@@ -35,10 +35,9 @@ func New(apiEndpoint *url.URL, user, password string, customHTTPClient *http.Cli
 	}
 	// create the cookie jar if needed
 	if customHTTPClient.Jar == nil {
-		customHTTPClient.Jar, err = cookiejar.New(&cookiejar.Options{
+		if customHTTPClient.Jar, err = cookiejar.New(&cookiejar.Options{
 			PublicSuffixList: publicsuffix.List,
-		})
-		if err != nil {
+		}); err != nil {
 			return
 		}
 	}
