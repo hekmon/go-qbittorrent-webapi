@@ -52,7 +52,7 @@ func (c *Client) requestBuild(ctx context.Context, method, APIName, APIMethodNam
 	return
 }
 
-func (c *Client) requestExecute(ctx context.Context, request *http.Request, output interface{}, autoAuth bool) (err error) {
+func (c *Client) requestExecute(ctx context.Context, request *http.Request, output any, autoAuth bool) (err error) {
 	// execute request
 	response, err := c.client.Do(request)
 	if err != nil {
@@ -119,8 +119,8 @@ func (c *Client) requestExtract(response *http.Response, output any) (err error)
 	case contentTypeHeaderJSON:
 		// output must be a struct or a slice pointer
 		switch reflect.Indirect(reflect.ValueOf(output)).Kind() {
-		case reflect.Struct:
-		case reflect.Slice:
+		case reflect.Struct, reflect.Slice:
+			// ok
 		default:
 			return InternalError(fmt.Sprintf("when %s is '%s' output should be a struct pointer or a slice pointer (currently: %v)",
 				contentTypeHeader, contentTypeHeaderJSON, reflect.TypeOf(output)))
