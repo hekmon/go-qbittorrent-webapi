@@ -94,6 +94,31 @@ func (c *Client) GetApplicationPreferences(ctx context.Context) (appPrefs Applic
 	return
 }
 
+// SetApplicationPreferences updates the application preferences. Only instanciate preferences you want to change.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#set-application-preferences
+func (c *Client) SetApplicationPreferences(ctx context.Context, appPrefs ApplicationPreferences) (err error) {
+	// First we need to marshal the prefs as json
+	data, err := json.Marshal(appPrefs)
+	if err != nil {
+		err = fmt.Errorf("marshaling preferences failed: %w", err)
+		return
+	}
+	// Then we can encapsulate it on the expected format
+	payload := map[string]string{
+		"json": string(data),
+	}
+	// Continue normally
+	req, err := c.requestBuild(ctx, "POST", applicationAPIName, "setPreferences", payload)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(ctx, req, nil, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
 // ApplicationPreferences references all the user preferences within the remote server.
 // When getting preferences, all fields should be instanciated. When setting preferences only
 // non nil pointers will be pass to the final payload (targeted update).
