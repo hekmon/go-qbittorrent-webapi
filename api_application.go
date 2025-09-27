@@ -499,3 +499,17 @@ func (u UTPTCPMixedMode) String() string {
 		return "Unknown"
 	}
 }
+
+// GetDefaultSavePath retrieves the default save path.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#get-default-save-path
+func (c *Client) GetDefaultSavePath(ctx context.Context) (path string, err error) {
+	req, err := c.requestBuild(ctx, "GET", applicationAPIName, "defaultSavePath", nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(ctx, req, &path, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
