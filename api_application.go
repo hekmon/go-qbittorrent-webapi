@@ -2,6 +2,7 @@ package qbtapi
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 )
 
@@ -228,4 +229,25 @@ type ApplicationPreferences struct {
 	UploadSlotsBehavior                *int           `json:"upload_slots_behavior,omitempty"`                  // Upload slots behavior used (see list of possible values below)
 	UPnPLeaseDuration                  *int           `json:"upnp_lease_duration,omitempty"`                    // UPnP lease duration (0: Permanent lease)
 	UTPTCPMixedMode                    *int           `json:"utp_tcp_mixed_mode,omitempty"`                     // μTP-TCP mixed mode algorithm (see list of possible values below)
+}
+
+func (ap *ApplicationPreferences) getMap() (data map[string]any) {
+	payload, err := json.Marshal(ap)
+	if err != nil {
+		// This should never happen
+		panic(err)
+	}
+	if err = json.Unmarshal(payload, &data); err != nil {
+		// This should never happen
+		panic(err)
+	}
+	return
+}
+
+func (ap *ApplicationPreferences) String() string {
+	return fmt.Sprintf("%v", ap.getMap())
+}
+
+func (ap *ApplicationPreferences) GoString() string {
+	return fmt.Sprintf("%#v", ap.getMap())
 }
