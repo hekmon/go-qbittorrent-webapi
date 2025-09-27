@@ -21,7 +21,7 @@ const (
 	contentTypeHeaderJSON      = "application/json"
 )
 
-func (c *Controller) requestBuild(ctx context.Context, method, APIName, APIMethodName string, input map[string]string) (request *http.Request, err error) {
+func (c *Client) requestBuild(ctx context.Context, method, APIName, APIMethodName string, input map[string]string) (request *http.Request, err error) {
 	// build URL
 	requestURL := *c.url
 	requestURL.Path = fmt.Sprintf("%s/%s/%s/%s", requestURL.Path, apiPrefix, APIName, APIMethodName)
@@ -48,7 +48,7 @@ func (c *Controller) requestBuild(ctx context.Context, method, APIName, APIMetho
 	return
 }
 
-func (c *Controller) requestExecute(ctx context.Context, request *http.Request, output interface{}, autoAuth bool) (err error) {
+func (c *Client) requestExecute(ctx context.Context, request *http.Request, output interface{}, autoAuth bool) (err error) {
 	// execute request
 	response, err := c.client.Do(request)
 	if err != nil {
@@ -85,7 +85,7 @@ func (c *Controller) requestExecute(ctx context.Context, request *http.Request, 
 	return c.requestExtract(response, output)
 }
 
-func (c *Controller) requestExtract(response *http.Response, output interface{}) (err error) {
+func (c *Client) requestExtract(response *http.Response, output interface{}) (err error) {
 	// Pre checks
 	if output == nil {
 		// caller does not care about body

@@ -16,9 +16,9 @@ const (
 	APIReferenceVersion = "2.5.1"
 )
 
-// New return a initialized and ready to use Controller.
+// New return a initialized and ready to use Client.
 // customHTTPClient can be nil
-func New(apiEndpoint *url.URL, user, password string, customHTTPClient *http.Client) (c *Controller, err error) {
+func New(apiEndpoint *url.URL, user, password string, customHTTPClient *http.Client) (c *Client, err error) {
 	// handle url
 	if apiEndpoint == nil {
 		err = errors.New("apiEndpoint can't be nil")
@@ -42,8 +42,8 @@ func New(apiEndpoint *url.URL, user, password string, customHTTPClient *http.Cli
 			return
 		}
 	}
-	// spawn the controller
-	c = &Controller{
+	// spawn the client
+	c = &Client{
 		user:     user,
 		password: password,
 		url:      copiedURL,
@@ -52,9 +52,9 @@ func New(apiEndpoint *url.URL, user, password string, customHTTPClient *http.Cli
 	return
 }
 
-// Controller is a statefull object allowing to interface the qBittorrent Web API on a particular endpoint.
+// Client is a statefull object allowing to interface the qBittorrent Web API on a particular endpoint.
 // Must be instanciated with New().
-type Controller struct {
+type Client struct {
 	user     string
 	password string
 	url      *url.URL

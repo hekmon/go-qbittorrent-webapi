@@ -18,7 +18,7 @@ const (
 // If successfull, a cookie will be set within the http client and will be used for any further methods calls.
 // Note that you do not need to call login yourself as it is called automatically if necessary.
 // https://github.com/qbittorrent/qBittorrent/wiki/Web-API-Documentation#login
-func (c *Controller) Login(ctx context.Context) (err error) {
+func (c *Client) Login(ctx context.Context) (err error) {
 	// Build request
 	req, err := c.requestBuild(ctx, "POST", authenticationAPIName, "login", map[string]string{
 		"username": c.user,
@@ -43,7 +43,7 @@ func (c *Controller) Login(ctx context.Context) (err error) {
 // Logout performs a clean logout against the server, effectively cleaning upstream (and local) cookie.
 // Recommended to call before exiting to leave a clean server state.
 // https://github.com/qbittorrent/qBittorrent/wiki/Web-API-Documentation#logout
-func (c *Controller) Logout(ctx context.Context) (err error) {
+func (c *Client) Logout(ctx context.Context) (err error) {
 	// Build request
 	req, err := c.requestBuild(ctx, "GET", authenticationAPIName, "logout", nil)
 	if err != nil {

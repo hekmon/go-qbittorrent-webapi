@@ -16,7 +16,7 @@ const (
 
 // GetApplicationVersion returns the application version.
 // https://github.com/qbittorrent/qBittorrent/wiki/Web-API-Documentation#get-application-version
-func (c *Controller) GetApplicationVersion(ctx context.Context) (version string, err error) {
+func (c *Client) GetApplicationVersion(ctx context.Context) (version string, err error) {
 	req, err := c.requestBuild(ctx, "GET", applicationAPIName, "version", nil)
 	if err != nil {
 		err = fmt.Errorf("building request failed: %w", err)
@@ -30,7 +30,7 @@ func (c *Controller) GetApplicationVersion(ctx context.Context) (version string,
 
 // GetAPIVersion returns the WebAPI version.
 // https://github.com/qbittorrent/qBittorrent/wiki/Web-API-Documentation#get-api-version
-func (c *Controller) GetAPIVersion(ctx context.Context) (version string, err error) {
+func (c *Client) GetAPIVersion(ctx context.Context) (version string, err error) {
 	req, err := c.requestBuild(ctx, "GET", applicationAPIName, "webapiVersion", nil)
 	if err != nil {
 		err = fmt.Errorf("building request failed: %w", err)
@@ -53,7 +53,7 @@ type BuildInfo struct {
 
 // GetBuildInfo returns compilation informations of target server.
 // https://github.com/qbittorrent/qBittorrent/wiki/Web-API-Documentation#get-build-info
-func (c *Controller) GetBuildInfo(ctx context.Context) (infos BuildInfo, err error) {
+func (c *Client) GetBuildInfo(ctx context.Context) (infos BuildInfo, err error) {
 	req, err := c.requestBuild(ctx, "GET", applicationAPIName, "buildInfo", nil)
 	if err != nil {
 		err = fmt.Errorf("building request failed: %w", err)
@@ -67,7 +67,7 @@ func (c *Controller) GetBuildInfo(ctx context.Context) (infos BuildInfo, err err
 
 // Shutdown stops the remote server.
 // https://github.com/qbittorrent/qBittorrent/wiki/Web-API-Documentation#shutdown-application
-func (c *Controller) Shutdown(ctx context.Context) (err error) {
+func (c *Client) Shutdown(ctx context.Context) (err error) {
 	req, err := c.requestBuild(ctx, "POST", applicationAPIName, "shutdown", nil)
 	if err != nil {
 		err = fmt.Errorf("building request failed: %w", err)
