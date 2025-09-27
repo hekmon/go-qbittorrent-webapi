@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -106,7 +106,7 @@ func (c *Controller) requestExtract(response *http.Response, output interface{})
 		}
 		// extract it
 		var bodyData []byte
-		if bodyData, err = ioutil.ReadAll(response.Body); err != nil {
+		if bodyData, err = io.ReadAll(response.Body); err != nil {
 			err = fmt.Errorf("reading answer body failed: %w", err)
 			return
 		}
