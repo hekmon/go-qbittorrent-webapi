@@ -24,42 +24,48 @@ const (
 	contentTypeHeaderJSON         = "application/json"
 )
 
-func (c *Client) requestBuild(ctx context.Context, method, APIName, APIMethodName string, input map[string]string) (request *http.Request, err error) {
+func (c *Client) requestBuild(ctx context.Context, method, APIName, APIMethodName string, parameters map[string]string) (request *http.Request, err error) {
 	// build URL
 	requestURL := *c.url
 	requestURL.Path = path.Join(requestURL.Path, apiPrefix, APIName, APIMethodName)
-	// build payload
+	// prepare query parameters
 	var (
-		body       io.Reader
-		reqPayload string
+		body              io.Reader
+		encodedParameters string
 	)
-	if method == "POST" && input != nil {
+	if parameters != nil {
+		// some endpoint requires non standard encoding
 		switch {
-		case len(input) == 1 && input[""] != "":
+		case len(parameters) == 1 && parameters[""] != "":
 			// weird qbittorrent implementation: we need to put the json data without encoding it (set cookies ?)
-			reqPayload = input[""]
-			fmt.Println(reqPayload)
-		case len(input) == 1 && input["json"] != "":
+			encodedParameters = parameters[""]
+		case len(parameters) == 1 && parameters["json"] != "":
 			// weird qbittorrent implementation: we need to put the json data without encoding it (set app prefs)
-			reqPayload = "json=" + input["json"]
-			fmt.Println(reqPayload)
+			encodedParameters = "json=" + parameters["json"]
 		default:
 			// regulard url encoded values
-			payloadValues := make(url.Values, len(input))
-			for key, value := range input {
+			payloadValues := make(url.Values, len(parameters))
+			for key, value := range parameters {
 				payloadValues.Set(key, value)
 			}
-			reqPayload = payloadValues.Encode()
+			encodedParameters = payloadValues.Encode()
 		}
-		body = strings.NewReader(reqPayload)
+		// set params as query or body depending on method
+		switch strings.ToUpper(method) {
+		case "GET":
+			requestURL.RawQuery = encodedParameters
+		case "POST":
+			body = strings.NewReader(encodedParameters)
+		}
 	}
 	// build http request
 	if request, err = http.NewRequestWithContext(ctx, method, requestURL.String(), body); err != nil {
 		return
 	}
 	if body != nil {
+		// if parameters has been set as body, adapt headers
 		request.Header.Set(contentTypeHeader, contentTypeHeaderFormURL)
-		request.Header.Set(contentLenHeader, strconv.Itoa(len(reqPayload)))
+		request.Header.Set(contentLenHeader, strconv.Itoa(len(encodedParameters)))
 	}
 	return
 }
@@ -87,7 +93,7 @@ func (c *Client) requestExecute(ctx context.Context, request *http.Request, outp
 			err = fmt.Errorf("auto login failed: %w", err)
 			return
 		}
-		// reset payload reader & reissue request now that we are auth
+		// reset payload reader & reissue request now that we are authenticated
 		if request.Body, err = request.GetBody(); err != nil {
 			err = fmt.Errorf("can't reset body of original query after successfull autologin: %w", err)
 			return
