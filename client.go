@@ -59,21 +59,3 @@ type Client struct {
 	url      *url.URL
 	client   *http.Client
 }
-
-// String returns a pointer to the string value passed in.
-// Useful for the many *string fields in the API model.
-func String(value string) *string {
-	return &value
-}
-
-// Int returns a pointer to the int value passed in.
-// Useful for the many *int fields in the API model.
-func Int(value int) *int {
-	return &value
-}
-
-// Bool returns a pointer to the bool value passed in.
-// Useful for the many *bool fields in the API model.
-func Bool(value bool) *bool {
-	return &value
-}

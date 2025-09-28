@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math"
 	"reflect"
 	"strconv"
 	"strings"
@@ -20,11 +19,6 @@ import (
 
 const (
 	torrentsAPIName = "torrents"
-)
-
-var (
-	// UnlimitedSpeedLimit is a special value that can be used to set a torrent or global speed limit to unlimited.
-	UnlimitedSpeedLimit = cunits.Speed{Bits: math.MaxUint64}
 )
 
 /*
@@ -126,8 +120,8 @@ type TorrentInfos struct {
 	Completed          cunits.Bits   `json:"completed"`          // Amount of transfer data completed
 	CompletionOn       time.Time     `json:"completion_on"`      // Time when the torrent completed
 	ContentPath        string        `json:"content_path"`       // Absolute path of torrent content (root path for multifile torrents, absolute file path for singlefile torrents)
-	DownloadSpeedLimit cunits.Speed  `json:"dl_limit"`           // Torrent download speed limit per second. -1 if unlimited.
-	DownloadSpeed      cunits.Speed  `json:"dlspeed"`            // Torrent download speed per second.
+	DownloadSpeedLimit Speed         `json:"dl_limit"`           // Torrent download speed limit per second. -1 if unlimited.
+	DownloadSpeed      Speed         `json:"dlspeed"`            // Torrent download speed per second.
 	Downloaded         cunits.Bits   `json:"downloaded"`         // Amount of data downloaded
 	DownloadedSession  cunits.Bits   `json:"downloaded_session"` // Amount of data downloaded this session
 	ETA                time.Duration `json:"eta"`                // Torrent ETA
@@ -161,10 +155,10 @@ type TorrentInfos struct {
 	TimeActive         time.Duration `json:"time_active"`        // Total active time
 	TotalSize          cunits.Bits   `json:"total_size"`         // Total size of all file in this torrent (including unselected ones)
 	Tracker            string        `json:"tracker"`            // The first tracker with working status. Returns empty string if no tracker is working.
-	UploadSpeedLimit   cunits.Speed  `json:"up_limit"`           // Torrent upload speed limit per second. -1 if unlimited.
+	UploadSpeedLimit   Speed         `json:"up_limit"`           // Torrent upload speed limit per second. -1 if unlimited.
 	Uploaded           cunits.Bits   `json:"uploaded"`           // Amount of data uploaded
 	UploadedSession    cunits.Bits   `json:"uploaded_session"`   // Amount of data uploaded this session
-	UploadSpeed        cunits.Speed  `json:"upspeed"`            // Torrent upload speed (per second)
+	UploadSpeed        Speed         `json:"upspeed"`            // Torrent upload speed (per second)
 }
 
 func (ti *TorrentInfos) UnmarshalJSON(data []byte) (err error) {
@@ -207,14 +201,8 @@ func (ti *TorrentInfos) UnmarshalJSON(data []byte) (err error) {
 	ti.AmountLeft = cunits.ImportInBytes(float64(tmp.AmountLeft))
 	ti.Completed = cunits.ImportInBytes(float64(tmp.Completed))
 	ti.CompletionOn = time.Unix(tmp.CompletionOn, 0)
-	switch tmp.DownloadSpeedLimit {
-	case -1:
-		// special value
-		ti.DownloadSpeedLimit = UnlimitedSpeedLimit
-	default:
-		ti.DownloadSpeedLimit = cunits.Speed{Bits: cunits.ImportInBytes(float64(tmp.DownloadSpeedLimit))}
-	}
-	ti.DownloadSpeed = cunits.Speed{Bits: cunits.ImportInBytes(float64(tmp.DownloadSpeed))}
+	ti.DownloadSpeedLimit = GetSpeedFromBytes(tmp.DownloadSpeedLimit)
+	ti.DownloadSpeed = GetSpeedFromBytes(tmp.DownloadSpeed)
 	ti.Downloaded = cunits.ImportInBytes(float64(tmp.Downloaded))
 	ti.DownloadedSession = cunits.ImportInBytes(float64(tmp.DownloadedSession))
 	ti.ETA = time.Duration(tmp.ETA) * time.Second
@@ -228,16 +216,10 @@ func (ti *TorrentInfos) UnmarshalJSON(data []byte) (err error) {
 	ti.Tags = strings.Split(tmp.Tags, ", ")
 	ti.TimeActive = time.Duration(tmp.TimeActive) * time.Second
 	ti.TotalSize = cunits.ImportInBytes(float64(tmp.TotalSize))
-	switch tmp.UploadSpeedLimit {
-	case -1:
-		// special value
-		ti.UploadSpeedLimit = UnlimitedSpeedLimit
-	default:
-		ti.UploadSpeedLimit = cunits.Speed{Bits: cunits.ImportInBytes(float64(tmp.UploadSpeedLimit))}
-	}
+	ti.UploadSpeedLimit = GetSpeedFromBytes(tmp.UploadSpeedLimit)
 	ti.Uploaded = cunits.ImportInBytes(float64(tmp.Uploaded))
 	ti.UploadedSession = cunits.ImportInBytes(float64(tmp.UploadedSession))
-	ti.UploadSpeed = cunits.Speed{Bits: cunits.ImportInBytes(float64(tmp.UploadSpeed))}
+	ti.UploadSpeed = GetSpeedFromBytes(tmp.UploadSpeed)
 	return
 }
 
@@ -277,14 +259,8 @@ func (ti *TorrentInfos) MarshalJSON() ([]byte, error) {
 	tmp.AmountLeft = int(ti.AmountLeft.Bytes())
 	tmp.Completed = int(ti.Completed.Bytes())
 	tmp.CompletionOn = ti.CompletionOn.Unix()
-	switch ti.DownloadSpeedLimit {
-	case UnlimitedSpeedLimit:
-		// special value
-		tmp.DownloadSpeedLimit = int(-1)
-	default:
-		tmp.DownloadSpeedLimit = int(ti.DownloadSpeedLimit.Bytes())
-	}
-	tmp.DownloadSpeed = int(ti.DownloadSpeed.Bytes())
+	tmp.DownloadSpeedLimit = ti.DownloadSpeedLimit.ToBytes()
+	tmp.DownloadSpeed = ti.DownloadSpeed.ToBytes()
 	tmp.Downloaded = int(ti.Downloaded.Bytes())
 	tmp.DownloadedSession = int(ti.DownloadedSession.Bytes())
 	tmp.ETA = int(ti.ETA.Seconds())
@@ -298,16 +274,10 @@ func (ti *TorrentInfos) MarshalJSON() ([]byte, error) {
 	tmp.Tags = strings.Join(ti.Tags, ", ")
 	tmp.TimeActive = int(ti.TimeActive.Seconds())
 	tmp.TotalSize = int(ti.TotalSize.Bytes())
-	switch ti.UploadSpeedLimit {
-	case UnlimitedSpeedLimit:
-		// special value
-		tmp.UploadSpeedLimit = int(-1)
-	default:
-		tmp.UploadSpeedLimit = int(ti.UploadSpeedLimit.Bytes())
-	}
+	tmp.UploadSpeedLimit = ti.UploadSpeedLimit.ToBytes()
 	tmp.Uploaded = int(ti.Uploaded.Bytes())
 	tmp.UploadedSession = int(ti.UploadedSession.Bytes())
-	tmp.UploadSpeed = int(ti.UploadSpeed.Bytes())
+	tmp.UploadSpeed = ti.UploadSpeed.ToBytes()
 	return json.Marshal(tmp)
 }
 
@@ -367,8 +337,8 @@ type TorrentGenericProperties struct {
 	TotalUploadedSession   cunits.Bits   `json:"total_uploaded_session"`   // Total data uploaded this session
 	TotalDownloaded        cunits.Bits   `json:"total_downloaded"`         // Total data downloaded for torrent
 	TotalDownloadedSession cunits.Bits   `json:"total_downloaded_session"` // Total data downloaded this session
-	UploadLimit            cunits.Speed  `json:"up_limit"`                 // Torrent upload limit
-	DownloadLimit          cunits.Speed  `json:"dl_limit"`                 // Torrent download limit
+	UploadLimit            Speed         `json:"up_limit"`                 // Torrent upload limit
+	DownloadLimit          Speed         `json:"dl_limit"`                 // Torrent download limit
 	TimeElapsed            time.Duration `json:"time_elapsed"`             // Torrent elapsed time
 	SeedingTime            time.Duration `json:"seeding_time"`             // Torrent elapsed time while complete
 	NbConnections          int           `json:"nb_connections"`           // Torrent connection count
@@ -377,8 +347,8 @@ type TorrentGenericProperties struct {
 	AdditionDate           time.Time     `json:"addition_date"`            // When this torrent was added
 	CompletionDate         time.Time     `json:"completion_date"`          // Torrent completion date
 	CreatedBy              string        `json:"created_by"`               // Torrent creator
-	DownloadSpeedAvg       cunits.Speed  `json:"dl_speed_avg"`             // Torrent average download speed
-	DownloadSpeed          cunits.Speed  `json:"dl_speed"`                 // Torrent download speed
+	DownloadSpeedAvg       Speed         `json:"dl_speed_avg"`             // Torrent average download speed
+	DownloadSpeed          Speed         `json:"dl_speed"`                 // Torrent download speed
 	ETA                    time.Duration `json:"eta"`                      // Torrent ETA
 	LastSeen               time.Time     `json:"last_seen"`                // Last seen complete date (unix timestamp)
 	Peers                  int           `json:"peers"`                    // Number of peers connected to
@@ -389,8 +359,8 @@ type TorrentGenericProperties struct {
 	Seeds                  int           `json:"seeds"`                    // Number of seeds connected to
 	SeedsTotal             int           `json:"seeds_total"`              // Number of seeds in the swarm
 	TotalSize              cunits.Bits   `json:"total_size"`               // Torrent total size
-	UploadSpeedAvg         cunits.Speed  `json:"up_speed_avg"`             // Torrent average upload speed
-	UploadSpeed            cunits.Speed  `json:"up_speed"`                 // Torrent upload speed
+	UploadSpeedAvg         Speed         `json:"up_speed_avg"`             // Torrent average upload speed
+	UploadSpeed            Speed         `json:"up_speed"`                 // Torrent upload speed
 	Private                bool          `json:"isPrivate"`                // True if torrent is from a private tracker
 }
 
@@ -434,19 +404,19 @@ func (tgp *TorrentGenericProperties) UnmarshalJSON(data []byte) (err error) {
 	tgp.TotalUploadedSession = cunits.ImportInBytes(float64(tmp.TotalUploadedSession))
 	tgp.TotalDownloaded = cunits.ImportInBytes(float64(tmp.TotalDownloaded))
 	tgp.TotalDownloadedSession = cunits.ImportInBytes(float64(tmp.TotalDownloadedSession))
-	tgp.UploadLimit = cunits.Speed{Bits: cunits.ImportInBytes(float64(tmp.UploadLimit))}
-	tgp.DownloadLimit = cunits.Speed{Bits: cunits.ImportInBytes(float64(tmp.DownloadLimit))}
+	tgp.UploadLimit = GetSpeedFromBytes(tmp.UploadLimit)
+	tgp.DownloadLimit = GetSpeedFromBytes(tmp.DownloadLimit)
 	tgp.TimeElapsed = time.Duration(tmp.TimeElapsed) * time.Second
 	tgp.SeedingTime = time.Duration(tmp.SeedingTime) * time.Second
 	tgp.AdditionDate = time.Unix(tmp.AdditionDate, 0)
 	tgp.CompletionDate = time.Unix(tmp.CompletionDate, 0)
-	tgp.DownloadSpeedAvg = cunits.Speed{Bits: cunits.ImportInBytes(float64(tmp.DownloadSpeedAvg))}
-	tgp.DownloadSpeed = cunits.Speed{Bits: cunits.ImportInBytes(float64(tmp.DownloadSpeed))}
+	tgp.DownloadSpeedAvg = GetSpeedFromBytes(tmp.DownloadSpeedAvg)
+	tgp.DownloadSpeed = GetSpeedFromBytes(tmp.DownloadSpeed)
 	tgp.ETA = time.Duration(tmp.ETA) * time.Second
 	tgp.LastSeen = time.Unix(tmp.LastSeen, 0)
 	tgp.TotalSize = cunits.ImportInBytes(float64(tmp.TotalSize))
-	tgp.UploadSpeedAvg = cunits.Speed{Bits: cunits.ImportInBytes(float64(tmp.UploadSpeedAvg))}
-	tgp.UploadSpeed = cunits.Speed{Bits: cunits.ImportInBytes(float64(tmp.UploadSpeed))}
+	tgp.UploadSpeedAvg = GetSpeedFromBytes(tmp.UploadSpeedAvg)
+	tgp.UploadSpeed = GetSpeedFromBytes(tmp.UploadSpeed)
 	return
 }
 
@@ -484,19 +454,19 @@ func (tgp *TorrentGenericProperties) MarshalJSON() ([]byte, error) {
 		TotalUploadedSession:   int(tgp.TotalUploadedSession.Bytes()),
 		TotalDownloaded:        int(tgp.TotalDownloaded.Bytes()),
 		TotalDownloadedSession: int(tgp.TotalDownloadedSession.Bytes()),
-		UploadLimit:            int(tgp.UploadLimit.Bits.Bytes()),
-		DownloadLimit:          int(tgp.DownloadLimit.Bits.Bytes()),
+		UploadLimit:            tgp.UploadLimit.ToBytes(),
+		DownloadLimit:          tgp.DownloadLimit.ToBytes(),
 		TimeElapsed:            int(tgp.TimeElapsed.Seconds()),
 		SeedingTime:            int(tgp.SeedingTime.Seconds()),
 		AdditionDate:           tgp.AdditionDate.Unix(),
 		CompletionDate:         tgp.CompletionDate.Unix(),
-		DownloadSpeedAvg:       int(tgp.DownloadSpeedAvg.Bits.Bytes()),
-		DownloadSpeed:          int(tgp.DownloadSpeed.Bits.Bytes()),
+		DownloadSpeedAvg:       tgp.DownloadSpeedAvg.ToBytes(),
+		DownloadSpeed:          tgp.DownloadSpeed.ToBytes(),
 		ETA:                    int(tgp.ETA.Seconds()),
 		LastSeen:               tgp.LastSeen.Unix(),
 		TotalSize:              int(tgp.TotalSize.Bytes()),
-		UploadSpeedAvg:         int(tgp.UploadSpeedAvg.Bits.Bytes()),
-		UploadSpeed:            int(tgp.UploadSpeed.Bits.Bytes()),
+		UploadSpeedAvg:         tgp.UploadSpeedAvg.ToBytes(),
+		UploadSpeed:            tgp.UploadSpeed.ToBytes(),
 	}
 	return json.Marshal(tmp)
 }
