@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"reflect"
 	"strconv"
 	"strings"
@@ -469,4 +470,97 @@ func (tgp *TorrentGenericProperties) MarshalJSON() ([]byte, error) {
 		UploadSpeed:            tgp.UploadSpeed.ToBytes(),
 	}
 	return json.Marshal(tmp)
+}
+
+/*
+	torrent trackers
+*/
+
+// GetTorrentTrackers returns the trackers for a given torrent.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#get-torrent-trackers
+func (c *Client) GetTorrentTrackers(ctx context.Context, hash string) (trackers []TorrentTracker, err error) {
+	// build request
+	req, err := c.requestBuild(ctx, "GET", torrentsAPIName, "trackers", map[string]string{"hash": hash})
+	if err != nil {
+		err = fmt.Errorf("request building failure: %w", err)
+		return
+	}
+	// execute request
+	if err = c.requestExecute(req, &trackers, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+// TorrentTracker represents a single tracker for a torrent
+type TorrentTracker struct {
+	URL           *url.URL             `json:"url"`            // Tracker url
+	Status        TorrentTrackerStatus `json:"status"`         // Tracker status. See the TorrentTrackerStatus constants below for possible values.
+	Tier          int                  `json:"tier"`           // Tracker priority tier. Lower tier trackers are tried before higher tiers. Tier numbers are valid when >= 0, < 0 is used as placeholder when tier does not exist for special entries (such as DHT).
+	NumPeers      int                  `json:"num_peers"`      // Number of peers for current torrent, as reported by the tracker
+	NumSeeds      int                  `json:"num_seeds"`      // Number of seeds for current torrent, as reported by the tracker
+	NumLeeches    int                  `json:"num_leeches"`    // Number of leeches for current torrent, as reported by the tracker
+	NumDownloaded int                  `json:"num_downloaded"` // Number of completed downloads for current torrent, as reported by the tracker
+	Message       string               `json:"msg"`            // Tracker message (there is no way of knowing what this message is - it's up to tracker admins)
+}
+
+func (tt *TorrentTracker) UnmarshalJSON(data []byte) (err error) {
+	type mask TorrentTracker
+	tmp := struct {
+		*mask
+		// Custom unmarshaling
+		URL string `json:"url"` // Tracker url
+	}{
+		mask: (*mask)(tt),
+	}
+	// Unmarshall to tmp struct
+	if err = json.Unmarshal(data, &tmp); err != nil {
+		return
+	}
+	// Adapt to golang types
+	if tt.URL, err = url.Parse(tmp.URL); err != nil {
+		return fmt.Errorf("failed to parse tracker URL: %w", err)
+	}
+	return
+}
+
+func (tt *TorrentTracker) MarshalJSON() ([]byte, error) {
+	type mask TorrentTracker
+	tmp := struct {
+		*mask
+		// Custom marshaling
+		URL string `json:"url"` // Tracker url
+	}{
+		mask: (*mask)(tt),
+		URL:  tt.URL.String(), // Format URL as string
+	}
+	return json.Marshal(tmp)
+}
+
+// TorrentTrackerStatus represents the status of a tracker
+type TorrentTrackerStatus uint8
+
+const (
+	TorrentTrackerDisabled     TorrentTrackerStatus = iota // Tracker is disabled (used for DHT, PeX, and LSD)
+	TorrentTrackerNotContacted                             // Tracker has not been contacted yet
+	TorrentTrackerWorking                                  // Tracker has been contacted and is working
+	TorrentTrackerUpdating                                 // Tracker is updating
+	TorrentTrackerNotWorking                               // Tracker has been contacted, but it is not working (or doesn't send proper replies)
+)
+
+func (tts TorrentTrackerStatus) String() string {
+	switch tts {
+	case TorrentTrackerDisabled:
+		return "disabled"
+	case TorrentTrackerNotContacted:
+		return "not contacted"
+	case TorrentTrackerWorking:
+		return "working"
+	case TorrentTrackerUpdating:
+		return "updating"
+	case TorrentTrackerNotWorking:
+		return "not working"
+	default:
+		return strconv.Itoa(int(tts))
+	}
 }

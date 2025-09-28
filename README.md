@@ -154,7 +154,7 @@ If you need more, feel free to open an issue or a PR.
 
 - [x] Get torrent list
 - [x] Get torrent generic properties
-- [ ] Get torrent trackers
+- [x] Get torrent trackers
 - [ ] Get torrent web seeds
 - [ ] Get torrent contents
 - [ ] Get torrent pieces' states

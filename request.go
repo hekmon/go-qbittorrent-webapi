@@ -145,7 +145,7 @@ func (c *Client) requestExtract(response *http.Response, output any) (err error)
 		}
 		// decode as JSON
 		if err = json.NewDecoder(response.Body).Decode(output); err != nil {
-			return fmt.Errorf("decody response body as JSON failed: %w", err)
+			return fmt.Errorf("decoding response body as JSON failed: %w", err)
 		}
 	default:
 		return InternalError(fmt.Sprintf("%s value '%s' is not supported",
