@@ -23,7 +23,7 @@ func (c *Client) GetApplicationVersion(ctx context.Context) (version string, err
 		err = fmt.Errorf("building request failed: %w", err)
 		return
 	}
-	if err = c.requestExecute(ctx, req, &version, true); err != nil {
+	if err = c.requestExecute(req, &version, true); err != nil {
 		err = fmt.Errorf("executing request failed: %w", err)
 	}
 	return
@@ -37,7 +37,7 @@ func (c *Client) GetAPIVersion(ctx context.Context) (version string, err error) 
 		err = fmt.Errorf("building request failed: %w", err)
 		return
 	}
-	if err = c.requestExecute(ctx, req, &version, true); err != nil {
+	if err = c.requestExecute(req, &version, true); err != nil {
 		err = fmt.Errorf("executing request failed: %w", err)
 	}
 	return
@@ -60,7 +60,7 @@ func (c *Client) GetBuildInfo(ctx context.Context) (infos BuildInfo, err error) 
 		err = fmt.Errorf("building request failed: %w", err)
 		return
 	}
-	if err = c.requestExecute(ctx, req, &infos, true); err != nil {
+	if err = c.requestExecute(req, &infos, true); err != nil {
 		err = fmt.Errorf("executing request failed: %w", err)
 	}
 	return
@@ -74,7 +74,7 @@ func (c *Client) Shutdown(ctx context.Context) (err error) {
 		err = fmt.Errorf("building request failed: %w", err)
 		return
 	}
-	if err = c.requestExecute(ctx, req, nil, true); err != nil {
+	if err = c.requestExecute(req, nil, true); err != nil {
 		err = fmt.Errorf("executing request failed: %w", err)
 	}
 	return
@@ -88,7 +88,7 @@ func (c *Client) GetApplicationPreferences(ctx context.Context) (appPrefs Applic
 		err = fmt.Errorf("building request failed: %w", err)
 		return
 	}
-	if err = c.requestExecute(ctx, req, &appPrefs, true); err != nil {
+	if err = c.requestExecute(req, &appPrefs, true); err != nil {
 		err = fmt.Errorf("executing request failed: %w", err)
 	}
 	return
@@ -113,7 +113,7 @@ func (c *Client) SetApplicationPreferences(ctx context.Context, appPrefs Applica
 		err = fmt.Errorf("building request failed: %w", err)
 		return
 	}
-	if err = c.requestExecute(ctx, req, nil, true); err != nil {
+	if err = c.requestExecute(req, nil, true); err != nil {
 		err = fmt.Errorf("executing request failed: %w", err)
 	}
 	return
@@ -508,7 +508,7 @@ func (c *Client) GetDefaultSavePath(ctx context.Context) (path string, err error
 		err = fmt.Errorf("building request failed: %w", err)
 		return
 	}
-	if err = c.requestExecute(ctx, req, &path, true); err != nil {
+	if err = c.requestExecute(req, &path, true); err != nil {
 		err = fmt.Errorf("executing request failed: %w", err)
 	}
 	return
@@ -533,7 +533,7 @@ func (c *Client) GetCookies(ctx context.Context) (cookies []Cookie, err error) {
 		err = fmt.Errorf("building request failed: %w", err)
 		return
 	}
-	if err = c.requestExecute(ctx, req, &cookies, true); err != nil {
+	if err = c.requestExecute(req, &cookies, true); err != nil {
 		err = fmt.Errorf("executing request failed: %w", err)
 	}
 	return
@@ -559,7 +559,7 @@ func (c *Client) SetCookies(ctx context.Context, cookies []Cookie) (err error) {
 		err = fmt.Errorf("building request failed: %w", err)
 		return
 	}
-	if err = c.requestExecute(ctx, req, nil, true); err != nil {
+	if err = c.requestExecute(req, nil, true); err != nil {
 		err = fmt.Errorf("executing request failed: %w", err)
 	}
 	return

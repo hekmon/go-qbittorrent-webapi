@@ -34,7 +34,7 @@ func (c *Client) Login(ctx context.Context) (err error) {
 	}
 	req.Header.Set(originHeader, origin)
 	// execute auth request
-	if err = c.requestExecute(ctx, req, nil, false); err != nil {
+	if err = c.requestExecute(req, nil, false); err != nil {
 		err = fmt.Errorf("executing request failed: %w", err)
 	}
 	return
@@ -49,8 +49,8 @@ func (c *Client) Logout(ctx context.Context) (err error) {
 	if err != nil {
 		return fmt.Errorf("request building failure: %w", err)
 	}
-	// execute auth request
-	if err = c.requestExecute(ctx, req, nil, false); err != nil {
+	// execute deauth request
+	if err = c.requestExecute(req, nil, false); err != nil {
 		err = fmt.Errorf("executing request failed: %w", err)
 	}
 	return

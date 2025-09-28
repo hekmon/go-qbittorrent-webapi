@@ -70,7 +70,7 @@ func (c *Client) requestBuild(ctx context.Context, method, APIName, APIMethodNam
 	return
 }
 
-func (c *Client) requestExecute(ctx context.Context, request *http.Request, output any, autoAuth bool) (err error) {
+func (c *Client) requestExecute(request *http.Request, output any, autoAuth bool) (err error) {
 	// execute request
 	response, err := c.client.Do(request)
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *Client) requestExecute(ctx context.Context, request *http.Request, outp
 		}
 		// try to login
 		response.Body.Close() // don't leave it hanging, early close
-		if err = c.Login(ctx); err != nil {
+		if err = c.Login(request.Context()); err != nil {
 			err = fmt.Errorf("auto login failed: %w", err)
 			return
 		}
@@ -98,7 +98,7 @@ func (c *Client) requestExecute(ctx context.Context, request *http.Request, outp
 			err = fmt.Errorf("can't reset body of original query after successfull autologin: %w", err)
 			return
 		}
-		return c.requestExecute(ctx, request, output, false)
+		return c.requestExecute(request, output, false)
 	default:
 		err = HTTPError(response.StatusCode)
 		return
