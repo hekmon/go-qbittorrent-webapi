@@ -151,7 +151,7 @@ type TorrentInfos struct {
 	SeenComplete       time.Time     `json:"seen_complete"`      // Time when this torrent was last seen complete
 	SequentialDownload bool          `json:"seq_dl"`             // True if sequential download is enabled
 	Size               cunits.Bits   `json:"size"`               // Total size of files selected for download
-	State              FilterState   `json:"state"`              // Torrent state
+	State              TorrentState  `json:"state"`              // Torrent state
 	SuperSeeding       bool          `json:"super_seeding"`      // True if super seeding is enabled
 	Tags               []string      `json:"tags"`               // Comma-concatenated tag list of the torrent
 	TimeActive         time.Duration `json:"time_active"`        // Total active time
@@ -306,3 +306,27 @@ func (ti *TorrentInfos) MarshalJSON() ([]byte, error) {
 	tmp.UploadSpeed = int(ti.UploadSpeed.Bytes())
 	return json.Marshal(tmp)
 }
+
+type TorrentState string
+
+const (
+	TorrentStateError               TorrentState = "error"              // Some error occurred, applies to paused torrents
+	TorrentStateMissingFiles        TorrentState = "missingFiles"       // Torrent data files is missing
+	TorrentStateUploading           TorrentState = "uploading"          // Torrent is being seeded and data is being transferred
+	TorrentStatePausedUploading     TorrentState = "pausedUP"           // Torrent is paused and has finished downloading
+	TorrentStateQueuedUploading     TorrentState = "queuedUP"           // Queuing is enabled and torrent is queued for upload
+	TorrentStateStalledUploading    TorrentState = "stalledUP"          // Torrent is being seeded, but no connection were made
+	TorrentStateCheckingUploading   TorrentState = "checkingUP"         // Torrent has finished downloading and is being checked
+	TorrentStateForcedUploading     TorrentState = "forcedUP"           // Torrent is forced to uploading and ignore queue limit
+	TorrentStateAllocating          TorrentState = "allocating"         // Torrent is allocating disk space for download
+	TorrentStateDownloading         TorrentState = "downloading"        // Torrent is being downloaded and data is being transferred
+	TorrentStateMetadataDownloading TorrentState = "metaDL"             // Torrent has just started downloading and is fetching metadata
+	TorrentStatePausedDownloading   TorrentState = "pausedDL"           // Torrent is paused and has not finished downloading
+	TorrentStateQueuedDownloading   TorrentState = "queuedDL"           // Queuing is enabled and torrent is queued for download
+	TorrentStateStalledDownloading  TorrentState = "stalledDL"          // Torrent is being downloaded, but no connection were made
+	TorrentStateCheckingDownloading TorrentState = "checkingDL"         // Same as TorrentStateCheckingUploading, but torrent has NOT finished downloading
+	TorrentStateForcedDownloading   TorrentState = "forcedDL"           // Torrent is forced to downloading to ignore queue limit
+	TorrentStateCheckingResumeData  TorrentState = "checkingResumeData" // Checking resume data on qBt startup
+	TorrentStateMoving              TorrentState = "moving"             // Torrent is moving to another location
+	TorrentStateUnknown             TorrentState = "unknown"            // Unknown torrent state
+)
