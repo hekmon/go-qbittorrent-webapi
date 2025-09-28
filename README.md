@@ -1,5 +1,7 @@
 # qBittorrent Web API
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/hekmon/go-qbittorrent-webapi.svg)](https://pkg.go.dev/github.com/hekmon/go-qbittorrent-webapi)
+
 Golang bindings for [qBittorrent v5 Web API](https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)).
 
 ## Installation
