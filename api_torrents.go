@@ -153,7 +153,7 @@ type TorrentInfos struct {
 	Size               cunits.Bits   `json:"size"`               // Total size of files selected for download
 	State              FilterState   `json:"state"`              // Torrent state
 	SuperSeeding       bool          `json:"super_seeding"`      // True if super seeding is enabled
-	Tags               string        `json:"tags"`               // Comma-concatenated tag list of the torrent
+	Tags               []string      `json:"tags"`               // Comma-concatenated tag list of the torrent
 	TimeActive         time.Duration `json:"time_active"`        // Total active time
 	TotalSize          cunits.Bits   `json:"total_size"`         // Total size of all file in this torrent (including unselected ones)
 	Tracker            string        `json:"tracker"`            // The first tracker with working status. Returns empty string if no tracker is working.
@@ -168,28 +168,29 @@ func (ti *TorrentInfos) UnmarshalJSON(data []byte) (err error) {
 	tmp := struct {
 		*mask
 		// Custom unmarshaling
-		AddedOn            int64 `json:"added_on"`           // Time (Unix Epoch) when the torrent was added to the client
-		AmountLeft         int   `json:"amount_left"`        // Amount of data left to download (bytes)
-		Completed          int   `json:"completed"`          // Amount of transfer data completed (bytes)
-		CompletionOn       int64 `json:"completion_on"`      // Time (Unix Epoch) when the torrent completed
-		DownloadSpeedLimit int   `json:"dl_limit"`           // Torrent download speed limit (bytes/s). -1 if unlimited.
-		DownloadSpeed      int   `json:"dlspeed"`            // Torrent download speed (bytes/s)
-		Downloaded         int   `json:"downloaded"`         // Amount of data downloaded
-		DownloadedSession  int   `json:"downloaded_session"` // Amount of data downloaded this session
-		ETA                int   `json:"eta"`                // Torrent ETA (seconds)
-		LastActivity       int64 `json:"last_activity"`      // Last time (Unix Epoch) when a chunk was downloaded/uploaded
-		MaxSeedingTime     int   `json:"max_seeding_time"`   // Maximum seeding time (seconds) until torrent is stopped from seeding
-		Reannounce         int   `json:"reannounce"`         // Time until the next tracker reannounce
-		SeedingTime        int   `json:"seeding_time"`       // Torrent elapsed time while complete (seconds)
-		SeedingTimeLimit   int   `json:"seeding_time_limit"` // TODO (what is different from max_seeding_time?)
-		SeenComplete       int64 `json:"seen_complete"`      // Time (Unix Epoch) when this torrent was last seen complete
-		Size               int   `json:"size"`               // Total size (bytes) of files selected for download
-		TimeActive         int   `json:"time_active"`        // Total active time (seconds)
-		TotalSize          int   `json:"total_size"`         // Total size (bytes) of all file in this torrent (including unselected ones)
-		UploadSpeedLimit   int   `json:"up_limit"`           // Torrent upload speed limit (bytes/s). -1 if unlimited.
-		Uploaded           int   `json:"uploaded"`           // Amount of data uploaded
-		UploadedSession    int   `json:"uploaded_session"`   // Amount of data uploaded this session
-		UploadSpeed        int   `json:"upspeed"`            // Torrent upload speed (bytes/s)
+		AddedOn            int64  `json:"added_on"`           // Time (Unix Epoch) when the torrent was added to the client
+		AmountLeft         int    `json:"amount_left"`        // Amount of data left to download (bytes)
+		Completed          int    `json:"completed"`          // Amount of transfer data completed (bytes)
+		CompletionOn       int64  `json:"completion_on"`      // Time (Unix Epoch) when the torrent completed
+		DownloadSpeedLimit int    `json:"dl_limit"`           // Torrent download speed limit (bytes/s). -1 if unlimited.
+		DownloadSpeed      int    `json:"dlspeed"`            // Torrent download speed (bytes/s)
+		Downloaded         int    `json:"downloaded"`         // Amount of data downloaded
+		DownloadedSession  int    `json:"downloaded_session"` // Amount of data downloaded this session
+		ETA                int    `json:"eta"`                // Torrent ETA (seconds)
+		LastActivity       int64  `json:"last_activity"`      // Last time (Unix Epoch) when a chunk was downloaded/uploaded
+		MaxSeedingTime     int    `json:"max_seeding_time"`   // Maximum seeding time (seconds) until torrent is stopped from seeding
+		Reannounce         int    `json:"reannounce"`         // Time until the next tracker reannounce
+		SeedingTime        int    `json:"seeding_time"`       // Torrent elapsed time while complete (seconds)
+		SeedingTimeLimit   int    `json:"seeding_time_limit"` // TODO (what is different from max_seeding_time?)
+		SeenComplete       int64  `json:"seen_complete"`      // Time (Unix Epoch) when this torrent was last seen complete
+		Size               int    `json:"size"`               // Total size (bytes) of files selected for download
+		Tags               string `json:"tags"`               // Comma-concatenated tag list of the torrent
+		TimeActive         int    `json:"time_active"`        // Total active time (seconds)
+		TotalSize          int    `json:"total_size"`         // Total size (bytes) of all file in this torrent (including unselected ones)
+		UploadSpeedLimit   int    `json:"up_limit"`           // Torrent upload speed limit (bytes/s). -1 if unlimited.
+		Uploaded           int    `json:"uploaded"`           // Amount of data uploaded
+		UploadedSession    int    `json:"uploaded_session"`   // Amount of data uploaded this session
+		UploadSpeed        int    `json:"upspeed"`            // Torrent upload speed (bytes/s)
 	}{
 		mask: (*mask)(ti),
 	}
@@ -220,6 +221,7 @@ func (ti *TorrentInfos) UnmarshalJSON(data []byte) (err error) {
 	ti.SeedingTimeLimit = time.Duration(tmp.SeedingTimeLimit) * time.Second
 	ti.SeenComplete = time.Unix(tmp.SeenComplete, 0)
 	ti.Size = cunits.ImportInBytes(float64(tmp.Size))
+	ti.Tags = strings.Split(tmp.Tags, ", ")
 	ti.TimeActive = time.Duration(tmp.TimeActive) * time.Second
 	ti.TotalSize = cunits.ImportInBytes(float64(tmp.TotalSize))
 	switch tmp.UploadSpeedLimit {
@@ -240,28 +242,29 @@ func (ti *TorrentInfos) MarshalJSON() ([]byte, error) {
 	tmp := struct {
 		*mask
 		// Custom marshaling
-		AddedOn            int64 `json:"added_on"`           // Time (Unix Epoch) when the torrent was added to the client
-		AmountLeft         int   `json:"amount_left"`        // Amount of data left to download (bytes)
-		Completed          int   `json:"completed"`          // Amount of transfer data completed (bytes)
-		CompletionOn       int64 `json:"completion_on"`      // Time (Unix Epoch) when the torrent completed
-		DownloadSpeedLimit int   `json:"dl_limit"`           // Torrent download speed limit (bytes/s). -1 if unlimited.
-		DownloadSpeed      int   `json:"dlspeed"`            // Torrent download speed (bytes/s)
-		Downloaded         int   `json:"downloaded"`         // Amount of data downloaded
-		DownloadedSession  int   `json:"downloaded_session"` // Amount of data downloaded this session
-		ETA                int   `json:"eta"`                // Torrent ETA (seconds)
-		LastActivity       int64 `json:"last_activity"`      // Last time (Unix Epoch) when a chunk was downloaded/uploaded
-		MaxSeedingTime     int   `json:"max_seeding_time"`   // Maximum seeding time (seconds) until torrent is stopped from seeding
-		Reannounce         int   `json:"reannounce"`         // Time until the next tracker reannounce
-		SeedingTime        int   `json:"seeding_time"`       // Torrent elapsed time while complete (seconds)
-		SeedingTimeLimit   int   `json:"seeding_time_limit"` // TODO (what is different from max_seeding_time?)
-		SeenComplete       int64 `json:"seen_complete"`      // Time (Unix Epoch) when this torrent was last seen complete
-		Size               int   `json:"size"`               // Total size (bytes) of files selected for download
-		TimeActive         int   `json:"time_active"`        // Total active time (seconds)
-		TotalSize          int   `json:"total_size"`         // Total size (bytes) of all file in this torrent (including unselected ones)
-		UploadSpeedLimit   int   `json:"up_limit"`           // Torrent upload speed limit (bytes/s). -1 if unlimited.
-		Uploaded           int   `json:"uploaded"`           // Amount of data uploaded
-		UploadedSession    int   `json:"uploaded_session"`   // Amount of data uploaded this session
-		UploadSpeed        int   `json:"upspeed"`            // Torrent upload speed (bytes/s)
+		AddedOn            int64  `json:"added_on"`           // Time (Unix Epoch) when the torrent was added to the client
+		AmountLeft         int    `json:"amount_left"`        // Amount of data left to download (bytes)
+		Completed          int    `json:"completed"`          // Amount of transfer data completed (bytes)
+		CompletionOn       int64  `json:"completion_on"`      // Time (Unix Epoch) when the torrent completed
+		DownloadSpeedLimit int    `json:"dl_limit"`           // Torrent download speed limit (bytes/s). -1 if unlimited.
+		DownloadSpeed      int    `json:"dlspeed"`            // Torrent download speed (bytes/s)
+		Downloaded         int    `json:"downloaded"`         // Amount of data downloaded
+		DownloadedSession  int    `json:"downloaded_session"` // Amount of data downloaded this session
+		ETA                int    `json:"eta"`                // Torrent ETA (seconds)
+		LastActivity       int64  `json:"last_activity"`      // Last time (Unix Epoch) when a chunk was downloaded/uploaded
+		MaxSeedingTime     int    `json:"max_seeding_time"`   // Maximum seeding time (seconds) until torrent is stopped from seeding
+		Reannounce         int    `json:"reannounce"`         // Time until the next tracker reannounce
+		SeedingTime        int    `json:"seeding_time"`       // Torrent elapsed time while complete (seconds)
+		SeedingTimeLimit   int    `json:"seeding_time_limit"` // TODO (what is different from max_seeding_time?)
+		SeenComplete       int64  `json:"seen_complete"`      // Time (Unix Epoch) when this torrent was last seen complete
+		Size               int    `json:"size"`               // Total size (bytes) of files selected for download
+		Tags               string `json:"tags"`               // Comma-concatenated tag list of the torrent
+		TimeActive         int    `json:"time_active"`        // Total active time (seconds)
+		TotalSize          int    `json:"total_size"`         // Total size (bytes) of all file in this torrent (including unselected ones)
+		UploadSpeedLimit   int    `json:"up_limit"`           // Torrent upload speed limit (bytes/s). -1 if unlimited.
+		Uploaded           int    `json:"uploaded"`           // Amount of data uploaded
+		UploadedSession    int    `json:"uploaded_session"`   // Amount of data uploaded this session
+		UploadSpeed        int    `json:"upspeed"`            // Torrent upload speed (bytes/s)
 	}{
 		mask: (*mask)(ti),
 	}
@@ -288,6 +291,7 @@ func (ti *TorrentInfos) MarshalJSON() ([]byte, error) {
 	tmp.SeedingTimeLimit = int(ti.SeedingTimeLimit.Seconds())
 	tmp.SeenComplete = ti.SeenComplete.Unix()
 	tmp.Size = int(ti.Size.Bytes())
+	tmp.Tags = strings.Join(ti.Tags, ", ")
 	tmp.TimeActive = int(ti.TimeActive.Seconds())
 	tmp.TotalSize = int(ti.TotalSize.Bytes())
 	switch ti.UploadSpeedLimit {
