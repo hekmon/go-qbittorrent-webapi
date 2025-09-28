@@ -2,10 +2,14 @@ package qbtapi
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
+
+	"github.com/hekmon/cunits/v2"
 )
 
 /*
@@ -104,51 +108,123 @@ func (c *Client) GetTorrentList(ctx context.Context, filters *ListFilters) (list
 // TorrentsInfos contains a torrent properties.
 // https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#get-torrent-list
 type TorrentInfos struct {
-	AddedOn            int     `json:"added_on"`           // Time (Unix Epoch) when the torrent was added to the client
-	AmountLeft         int     `json:"amount_left"`        // Amount of data left to download (bytes)
-	AutoTMM            bool    `json:"auto_tmm"`           // Whether this torrent is managed by Automatic Torrent Management
-	Availability       float64 `json:"availability"`       // Percentage of file pieces currently available
-	Category           string  `json:"category"`           // Category of the torrent
-	Completed          int     `json:"completed"`          // Amount of transfer data completed (bytes)
-	CompletionOn       int     `json:"completion_on"`      // Time (Unix Epoch) when the torrent completed
-	ContentPath        string  `json:"content_path"`       // Absolute path of torrent content (root path for multifile torrents, absolute file path for singlefile torrents)
-	DownloadSpeedLimit int     `json:"dl_limit"`           // Torrent download speed limit (bytes/s). -1 if unlimited.
-	DownloadSpeed      int     `json:"dlspeed"`            // Torrent download speed (bytes/s)
-	Downloaded         int     `json:"downloaded"`         // Amount of data downloaded
-	DownloadedSession  int     `json:"downloaded_session"` // Amount of data downloaded this session
-	ETA                int     `json:"eta"`                // Torrent ETA (seconds)
-	FirstLastPiecePrio bool    `json:"f_l_piece_prio"`     // True if first last piece are prioritized
-	ForceStart         bool    `json:"force_start"`        // True if force start is enabled for this torrent
-	Hash               string  `json:"hash"`               // Torrent hash
-	IsPrivate          bool    `json:"isPrivate"`          // True if torrent is from a private tracker
-	LastActivity       int     `json:"last_activity"`      // Last time (Unix Epoch) when a chunk was downloaded/uploaded
-	MagnetURI          string  `json:"magnet_uri"`         // Magnet URI corresponding to this torrent
-	MaxRatio           float64 `json:"max_ratio"`          // Maximum share ratio until torrent is stopped from seeding/uploading
-	MaxSeedingTime     int     `json:"max_seeding_time"`   // Maximum seeding time (seconds) until torrent is stopped from seeding
-	Name               string  `json:"name"`               // Torrent name
-	NumComplete        int     `json:"num_complete"`       // Number of seeds in the swarm
-	NumIncomplete      int     `json:"num_incomplete"`     // Number of leechers in the swarm
-	NumLeechs          int     `json:"num_leechs"`         // Number of leechers connected to
-	NumSeeds           int     `json:"num_seeds"`          // Number of seeds connected to
-	Priority           int     `json:"priority"`           // Torrent priority. Returns -1 if queuing is disabled or torrent is in seed mode
-	Progress           float64 `json:"progress"`           // Torrent progress (percentage/100)
-	Ratio              float64 `json:"ratio"`              // Torrent share ratio. Max ratio value: 9999.
-	RatioLimit         float64 `json:"ratio_limit"`        // TODO (what is different from max_ratio?)
-	Reannounce         int     `json:"reannounce"`         // Time until the next tracker reannounce
-	SavePath           string  `json:"save_path"`          // Path where this torrent's data is stored
-	SeedingTime        int     `json:"seeding_time"`       // Torrent elapsed time while complete (seconds)
-	SeedingTimeLimit   int     `json:"seeding_time_limit"` // TODO (what is different from max_seeding_time?)
-	SeenComplete       int     `json:"seen_complete"`      // Time (Unix Epoch) when this torrent was last seen complete
-	SequentialDownload bool    `json:"seq_dl"`             // True if sequential download is enabled
-	Size               int     `json:"size"`               // Total size (bytes) of files selected for download
-	State              string  `json:"state"`              // Torrent state. See table here below for the possible values
-	SuperSeeding       bool    `json:"super_seeding"`      // True if super seeding is enabled
-	Tags               string  `json:"tags"`               // Comma-concatenated tag list of the torrent
-	TimeActive         int     `json:"time_active"`        // Total active time (seconds)
-	TotalSize          int     `json:"total_size"`         // Total size (bytes) of all file in this torrent (including unselected ones)
-	Tracker            string  `json:"tracker"`            // The first tracker with working status. Returns empty string if no tracker is working.
-	UploadSpeedLimit   int     `json:"up_limit"`           // Torrent upload speed limit (bytes/s). -1 if unlimited.
-	Uploaded           int     `json:"uploaded"`           // Amount of data uploaded
-	UploadedSession    int     `json:"uploaded_session"`   // Amount of data uploaded this session
-	UploadSpeed        int     `json:"upspeed"`            // Torrent upload speed (bytes/s)
+	AddedOn            time.Time     `json:"added_on"`           // Time when the torrent was added to the client
+	AmountLeft         cunits.Bits   `json:"amount_left"`        // Amount of data left to download
+	AutoTMM            bool          `json:"auto_tmm"`           // Whether this torrent is managed by Automatic Torrent Management
+	Availability       float64       `json:"availability"`       // Percentage of file pieces currently available
+	Category           string        `json:"category"`           // Category of the torrent
+	Completed          cunits.Bits   `json:"completed"`          // Amount of transfer data completed
+	CompletionOn       time.Time     `json:"completion_on"`      // Time when the torrent completed
+	ContentPath        string        `json:"content_path"`       // Absolute path of torrent content (root path for multifile torrents, absolute file path for singlefile torrents)
+	DownloadSpeedLimit cunits.Bits   `json:"dl_limit"`           // Torrent download speed limit per second. -1 if unlimited.
+	DownloadSpeed      cunits.Bits   `json:"dlspeed"`            // Torrent download speed per second.
+	Downloaded         cunits.Bits   `json:"downloaded"`         // Amount of data downloaded
+	DownloadedSession  cunits.Bits   `json:"downloaded_session"` // Amount of data downloaded this session
+	ETA                time.Duration `json:"eta"`                // Torrent ETA
+	FirstLastPiecePrio bool          `json:"f_l_piece_prio"`     // True if first last piece are prioritized
+	ForceStart         bool          `json:"force_start"`        // True if force start is enabled for this torrent
+	Hash               string        `json:"hash"`               // Torrent hash
+	IsPrivate          bool          `json:"isPrivate"`          // True if torrent is from a private tracker
+	LastActivity       time.Time     `json:"last_activity"`      // Last time when a chunk was downloaded/uploaded
+	MagnetURI          string        `json:"magnet_uri"`         // Magnet URI corresponding to this torrent
+	MaxRatio           float64       `json:"max_ratio"`          // Maximum share ratio until torrent is stopped from seeding/uploading
+	MaxSeedingTime     time.Duration `json:"max_seeding_time"`   // Maximum seeding time until torrent is stopped from seeding
+	Name               string        `json:"name"`               // Torrent name
+	NumComplete        int           `json:"num_complete"`       // Number of seeds in the swarm
+	NumIncomplete      int           `json:"num_incomplete"`     // Number of leechers in the swarm
+	NumLeechs          int           `json:"num_leechs"`         // Number of leechers connected to
+	NumSeeds           int           `json:"num_seeds"`          // Number of seeds connected to
+	Priority           int           `json:"priority"`           // Torrent priority. Returns -1 if queuing is disabled or torrent is in seed mode
+	Progress           float64       `json:"progress"`           // Torrent progress (percentage/100)
+	Ratio              float64       `json:"ratio"`              // Torrent share ratio. Max ratio value: 9999.
+	RatioLimit         float64       `json:"ratio_limit"`        // TODO (what is different from max_ratio?)
+	Reannounce         time.Duration `json:"reannounce"`         // Time until the next tracker reannounce
+	SavePath           string        `json:"save_path"`          // Path where this torrent's data is stored
+	SeedingTime        time.Duration `json:"seeding_time"`       // Torrent elapsed time while complete
+	SeedingTimeLimit   time.Duration `json:"seeding_time_limit"` // TODO (what is different from max_seeding_time?)
+	SeenComplete       time.Time     `json:"seen_complete"`      // Time when this torrent was last seen complete
+	SequentialDownload bool          `json:"seq_dl"`             // True if sequential download is enabled
+	Size               cunits.Bits   `json:"size"`               // Total size of files selected for download
+	State              FilterState   `json:"state"`              // Torrent state. See table here below for the possible values
+	SuperSeeding       bool          `json:"super_seeding"`      // True if super seeding is enabled
+	Tags               string        `json:"tags"`               // Comma-concatenated tag list of the torrent
+	TimeActive         time.Duration `json:"time_active"`        // Total active time
+	TotalSize          cunits.Bits   `json:"total_size"`         // Total size of all file in this torrent (including unselected ones)
+	Tracker            string        `json:"tracker"`            // The first tracker with working status. Returns empty string if no tracker is working.
+	UploadSpeedLimit   cunits.Bits   `json:"up_limit"`           // Torrent upload speed limit per second. -1 if unlimited.
+	Uploaded           cunits.Bits   `json:"uploaded"`           // Amount of data uploaded
+	UploadedSession    cunits.Bits   `json:"uploaded_session"`   // Amount of data uploaded this session
+	UploadSpeed        cunits.Bits   `json:"upspeed"`            // Torrent upload speed (per second)
+}
+
+func (ti *TorrentInfos) UnmarshalJSON(data []byte) (err error) {
+	type mask TorrentInfos
+	tmp := struct {
+		*mask
+		// Custom unmarshaling
+		AddedOn            int64 `json:"added_on"`           // Time (Unix Epoch) when the torrent was added to the client
+		AmountLeft         int   `json:"amount_left"`        // Amount of data left to download (bytes)
+		Completed          int   `json:"completed"`          // Amount of transfer data completed (bytes)
+		CompletionOn       int64 `json:"completion_on"`      // Time (Unix Epoch) when the torrent completed
+		DownloadSpeedLimit int   `json:"dl_limit"`           // Torrent download speed limit (bytes/s). -1 if unlimited.
+		DownloadSpeed      int   `json:"dlspeed"`            // Torrent download speed (bytes/s)
+		Downloaded         int   `json:"downloaded"`         // Amount of data downloaded
+		DownloadedSession  int   `json:"downloaded_session"` // Amount of data downloaded this session
+		ETA                int   `json:"eta"`                // Torrent ETA (seconds)
+		LastActivity       int64 `json:"last_activity"`      // Last time (Unix Epoch) when a chunk was downloaded/uploaded
+		MaxSeedingTime     int   `json:"max_seeding_time"`   // Maximum seeding time (seconds) until torrent is stopped from seeding
+		Reannounce         int   `json:"reannounce"`         // Time until the next tracker reannounce
+		SeedingTime        int   `json:"seeding_time"`       // Torrent elapsed time while complete (seconds)
+		SeedingTimeLimit   int   `json:"seeding_time_limit"` // TODO (what is different from max_seeding_time?)
+		SeenComplete       int64 `json:"seen_complete"`      // Time (Unix Epoch) when this torrent was last seen complete
+		Size               int   `json:"size"`               // Total size (bytes) of files selected for download
+		TimeActive         int   `json:"time_active"`        // Total active time (seconds)
+		TotalSize          int   `json:"total_size"`         // Total size (bytes) of all file in this torrent (including unselected ones)
+		UploadSpeedLimit   int   `json:"up_limit"`           // Torrent upload speed limit (bytes/s). -1 if unlimited.
+		Uploaded           int   `json:"uploaded"`           // Amount of data uploaded
+		UploadedSession    int   `json:"uploaded_session"`   // Amount of data uploaded this session
+		UploadSpeed        int   `json:"upspeed"`            // Torrent upload speed (bytes/s)
+	}{
+		mask: (*mask)(ti),
+	}
+	// Unmarshall to tmp struct
+	if err = json.Unmarshal(data, &tmp); err != nil {
+		return
+	}
+	// Adapt to golang types
+	ti.AddedOn = time.Unix(tmp.AddedOn, 0)
+	ti.AmountLeft = cunits.ImportInByte(float64(tmp.AmountLeft))
+	ti.Completed = cunits.ImportInByte(float64(tmp.Completed))
+	ti.CompletionOn = time.Unix(tmp.CompletionOn, 0)
+	switch tmp.DownloadSpeedLimit {
+	case -1:
+		// keeping special value
+		ti.DownloadSpeedLimit = cunits.Bits(tmp.DownloadSpeedLimit)
+	default:
+		ti.DownloadSpeedLimit = cunits.ImportInByte(float64(tmp.DownloadSpeedLimit))
+	}
+	ti.DownloadSpeed = cunits.ImportInByte(float64(tmp.DownloadSpeed))
+	ti.Downloaded = cunits.ImportInByte(float64(tmp.Downloaded))
+	ti.DownloadedSession = cunits.ImportInByte(float64(tmp.DownloadedSession))
+	ti.ETA = time.Duration(tmp.ETA) * time.Second
+	ti.LastActivity = time.Unix(tmp.LastActivity, 0)
+	ti.MaxSeedingTime = time.Duration(tmp.MaxSeedingTime) * time.Second
+	ti.Reannounce = time.Duration(tmp.Reannounce) * time.Second
+	ti.SeedingTime = time.Duration(tmp.SeedingTime) * time.Second
+	ti.SeedingTimeLimit = time.Duration(tmp.SeedingTimeLimit) * time.Second
+	ti.SeenComplete = time.Unix(tmp.SeenComplete, 0)
+	ti.Size = cunits.ImportInByte(float64(tmp.Size))
+	ti.TimeActive = time.Duration(tmp.TimeActive) * time.Second
+	ti.TotalSize = cunits.ImportInByte(float64(tmp.TotalSize))
+	switch tmp.UploadSpeedLimit {
+	case -1:
+		// keeping special value
+		ti.UploadSpeedLimit = cunits.Bits(tmp.UploadSpeedLimit)
+	default:
+		ti.UploadSpeedLimit = cunits.ImportInByte(float64(tmp.UploadSpeedLimit))
+	}
+	ti.Uploaded = cunits.ImportInByte(float64(tmp.Uploaded))
+	ti.UploadedSession = cunits.ImportInByte(float64(tmp.UploadedSession))
+	ti.UploadSpeed = cunits.ImportInByte(float64(tmp.UploadSpeed))
+	return
 }
