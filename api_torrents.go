@@ -356,7 +356,7 @@ type TorrentGenericProperties struct {
 	PeersTotal             int           `json:"peers_total"`              // Number of peers in the swarm
 	PiecesHave             int           `json:"pieces_have"`              // Number of pieces owned
 	PiecesNum              int           `json:"pieces_num"`               // Number of pieces of the torrent
-	Reannounce             int           `json:"reannounce"`               // Number of seconds until the next announce
+	Reannounce             time.Duration `json:"reannounce"`               // Duration until the next announce
 	Seeds                  int           `json:"seeds"`                    // Number of seeds connected to
 	SeedsTotal             int           `json:"seeds_total"`              // Number of seeds in the swarm
 	TotalSize              cunits.Bits   `json:"total_size"`               // Torrent total size
@@ -387,6 +387,7 @@ func (tgp *TorrentGenericProperties) UnmarshalJSON(data []byte) (err error) {
 		DownloadSpeed          int   `json:"dl_speed"`                 // Torrent download speed (bytes/second)
 		ETA                    int   `json:"eta"`                      // Torrent ETA (seconds)
 		LastSeen               int64 `json:"last_seen"`                // Last seen complete date (unix timestamp)
+		Reannounce             int   `json:"reannounce"`               // Number of seconds until the next announce
 		TotalSize              int   `json:"total_size"`               // Torrent total size (bytes)
 		UploadSpeedAvg         int   `json:"up_speed_avg"`             // Torrent average upload speed (bytes/second)
 		UploadSpeed            int   `json:"up_speed"`                 // Torrent upload speed (bytes/second)
@@ -415,6 +416,7 @@ func (tgp *TorrentGenericProperties) UnmarshalJSON(data []byte) (err error) {
 	tgp.DownloadSpeed = GetSpeedFromBytes(tmp.DownloadSpeed)
 	tgp.ETA = time.Duration(tmp.ETA) * time.Second
 	tgp.LastSeen = time.Unix(tmp.LastSeen, 0)
+	tgp.Reannounce = time.Duration(tmp.Reannounce) * time.Second
 	tgp.TotalSize = cunits.ImportInBytes(float64(tmp.TotalSize))
 	tgp.UploadSpeedAvg = GetSpeedFromBytes(tmp.UploadSpeedAvg)
 	tgp.UploadSpeed = GetSpeedFromBytes(tmp.UploadSpeed)
@@ -443,6 +445,7 @@ func (tgp *TorrentGenericProperties) MarshalJSON() ([]byte, error) {
 		DownloadSpeed          int   `json:"dl_speed"`                 // Torrent download speed (bytes/second)
 		ETA                    int   `json:"eta"`                      // Torrent ETA (seconds)
 		LastSeen               int64 `json:"last_seen"`                // Last seen complete date (unix timestamp)
+		Reannounce             int   `json:"reannounce"`               // Number of seconds until the next announce
 		TotalSize              int   `json:"total_size"`               // Torrent total size (bytes)
 		UploadSpeedAvg         int   `json:"up_speed_avg"`             // Torrent average upload speed (bytes/second)
 		UploadSpeed            int   `json:"up_speed"`                 // Torrent upload speed (bytes/second)
@@ -465,6 +468,7 @@ func (tgp *TorrentGenericProperties) MarshalJSON() ([]byte, error) {
 		DownloadSpeed:          tgp.DownloadSpeed.ToBytes(),
 		ETA:                    int(tgp.ETA.Seconds()),
 		LastSeen:               tgp.LastSeen.Unix(),
+		Reannounce:             int(tgp.Reannounce.Seconds()),
 		TotalSize:              int(tgp.TotalSize.Bytes()),
 		UploadSpeedAvg:         tgp.UploadSpeedAvg.ToBytes(),
 		UploadSpeed:            tgp.UploadSpeed.ToBytes(),
