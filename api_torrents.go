@@ -27,6 +27,10 @@ var (
 	UnlimitedSpeedLimit = cunits.Speed{Bits: math.MaxUint64}
 )
 
+/*
+	Listing
+*/
+
 // ListFilters contains all filters that can be applied to torrent listing.
 // All values will be automatically url encoded and so does not need pre encoding.
 type ListFilters struct {
@@ -130,7 +134,7 @@ type TorrentInfos struct {
 	FirstLastPiecePrio bool          `json:"f_l_piece_prio"`     // True if first last piece are prioritized
 	ForceStart         bool          `json:"force_start"`        // True if force start is enabled for this torrent
 	Hash               string        `json:"hash"`               // Torrent hash
-	IsPrivate          bool          `json:"isPrivate"`          // True if torrent is from a private tracker
+	Private            bool          `json:"isPrivate"`          // True if torrent is from a private tracker
 	LastActivity       time.Time     `json:"last_activity"`      // Last time when a chunk was downloaded/uploaded
 	MagnetURI          string        `json:"magnet_uri"`         // Magnet URI corresponding to this torrent
 	MaxRatio           float64       `json:"max_ratio"`          // Maximum share ratio until torrent is stopped from seeding/uploading
@@ -330,3 +334,169 @@ const (
 	TorrentStateMoving              TorrentState = "moving"             // Torrent is moving to another location
 	TorrentStateUnknown             TorrentState = "unknown"            // Unknown torrent state
 )
+
+/*
+	Generic properties
+*/
+
+// GetTorrentGenericProperties returns the generic properties of a torrent identified by its hash.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#get-torrent-generic-properties
+func (c *Client) GetTorrentGenericProperties(ctx context.Context, hash string) (torrentProperties TorrentGenericProperties, err error) {
+	// build request
+	req, err := c.requestBuild(ctx, "GET", torrentsAPIName, "properties", map[string]string{"hash": hash})
+	if err != nil {
+		err = fmt.Errorf("request building failure: %w", err)
+		return
+	}
+	// execute request
+	if err = c.requestExecute(req, &torrentProperties, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+// TorrentGenericProperties represents the generic properties of a torrent.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#get-torrent-generic-properties
+type TorrentGenericProperties struct {
+	SavePath               string        `json:"save_path"`                // Torrent save path
+	CreationDate           time.Time     `json:"creation_date"`            // Torrent creation date
+	PieceSize              cunits.Bits   `json:"piece_size"`               // Torrent piece size
+	Comment                string        `json:"comment"`                  // Torrent comment
+	TotalWasted            cunits.Bits   `json:"total_wasted"`             // Total data wasted for torrent
+	TotalUploaded          cunits.Bits   `json:"total_uploaded"`           // Total data uploaded for torrent
+	TotalUploadedSession   cunits.Bits   `json:"total_uploaded_session"`   // Total data uploaded this session
+	TotalDownloaded        cunits.Bits   `json:"total_downloaded"`         // Total data downloaded for torrent
+	TotalDownloadedSession cunits.Bits   `json:"total_downloaded_session"` // Total data downloaded this session
+	UploadLimit            cunits.Speed  `json:"up_limit"`                 // Torrent upload limit
+	DownloadLimit          cunits.Speed  `json:"dl_limit"`                 // Torrent download limit
+	TimeElapsed            time.Duration `json:"time_elapsed"`             // Torrent elapsed time
+	SeedingTime            time.Duration `json:"seeding_time"`             // Torrent elapsed time while complete
+	NbConnections          int           `json:"nb_connections"`           // Torrent connection count
+	NbConnectionsLimit     int           `json:"nb_connections_limit"`     // Torrent connection count limit
+	ShareRatio             float64       `json:"share_ratio"`              // Torrent share ratio
+	AdditionDate           time.Time     `json:"addition_date"`            // When this torrent was added
+	CompletionDate         time.Time     `json:"completion_date"`          // Torrent completion date
+	CreatedBy              string        `json:"created_by"`               // Torrent creator
+	DownloadSpeedAvg       cunits.Speed  `json:"dl_speed_avg"`             // Torrent average download speed
+	DownloadSpeed          cunits.Speed  `json:"dl_speed"`                 // Torrent download speed
+	ETA                    time.Duration `json:"eta"`                      // Torrent ETA
+	LastSeen               time.Time     `json:"last_seen"`                // Last seen complete date (unix timestamp)
+	Peers                  int           `json:"peers"`                    // Number of peers connected to
+	PeersTotal             int           `json:"peers_total"`              // Number of peers in the swarm
+	PiecesHave             int           `json:"pieces_have"`              // Number of pieces owned
+	PiecesNum              int           `json:"pieces_num"`               // Number of pieces of the torrent
+	Reannounce             int           `json:"reannounce"`               // Number of seconds until the next announce
+	Seeds                  int           `json:"seeds"`                    // Number of seeds connected to
+	SeedsTotal             int           `json:"seeds_total"`              // Number of seeds in the swarm
+	TotalSize              cunits.Bits   `json:"total_size"`               // Torrent total size
+	UploadSpeedAvg         cunits.Speed  `json:"up_speed_avg"`             // Torrent average upload speed
+	UploadSpeed            cunits.Speed  `json:"up_speed"`                 // Torrent upload speed
+	Private                bool          `json:"isPrivate"`                // True if torrent is from a private tracker
+}
+
+func (tgp *TorrentGenericProperties) UnmarshalJSON(data []byte) (err error) {
+	type mask TorrentGenericProperties
+	tmp := struct {
+		*mask
+		// Custom unmarshaling
+		CreationDate           int64 `json:"creation_date"`            // Torrent creation date (Unix timestamp)
+		PieceSize              int   `json:"piece_size"`               // Torrent piece size (bytes)
+		TotalWasted            int   `json:"total_wasted"`             // Total data wasted for torrent (bytes)
+		TotalUploaded          int   `json:"total_uploaded"`           // Total data uploaded for torrent (bytes)
+		TotalUploadedSession   int   `json:"total_uploaded_session"`   // Total data uploaded this session (bytes)
+		TotalDownloaded        int   `json:"total_downloaded"`         // Total data downloaded for torrent (bytes)
+		TotalDownloadedSession int   `json:"total_downloaded_session"` // Total data downloaded this session (bytes)
+		UploadLimit            int   `json:"up_limit"`                 // Torrent upload limit (bytes/s)
+		DownloadLimit          int   `json:"dl_limit"`                 // Torrent download limit (bytes/s)
+		TimeElapsed            int64 `json:"time_elapsed"`             // Torrent elapsed time (seconds)
+		SeedingTime            int   `json:"seeding_time"`             // Torrent elapsed time while complete (seconds)
+		AdditionDate           int64 `json:"addition_date"`            // When this torrent was added (unix timestamp)
+		CompletionDate         int64 `json:"completion_date"`          // Torrent completion date (unix timestamp)
+		DownloadSpeedAvg       int   `json:"dl_speed_avg"`             // Torrent average download speed (bytes/second)
+		DownloadSpeed          int   `json:"dl_speed"`                 // Torrent download speed (bytes/second)
+		ETA                    int   `json:"eta"`                      // Torrent ETA (seconds)
+		LastSeen               int64 `json:"last_seen"`                // Last seen complete date (unix timestamp)
+		TotalSize              int   `json:"total_size"`               // Torrent total size (bytes)
+		UploadSpeedAvg         int   `json:"up_speed_avg"`             // Torrent average upload speed (bytes/second)
+		UploadSpeed            int   `json:"up_speed"`                 // Torrent upload speed (bytes/second)
+	}{
+		mask: (*mask)(tgp),
+	}
+	// Unmarshall to tmp struct
+	if err = json.Unmarshal(data, &tmp); err != nil {
+		return
+	}
+	// Adapt to golang types
+	tgp.CreationDate = time.Unix(tmp.CreationDate, 0)
+	tgp.PieceSize = cunits.ImportInBytes(float64(tmp.PieceSize))
+	tgp.TotalWasted = cunits.ImportInBytes(float64(tmp.TotalWasted))
+	tgp.TotalUploaded = cunits.ImportInBytes(float64(tmp.TotalUploaded))
+	tgp.TotalUploadedSession = cunits.ImportInBytes(float64(tmp.TotalUploadedSession))
+	tgp.TotalDownloaded = cunits.ImportInBytes(float64(tmp.TotalDownloaded))
+	tgp.TotalDownloadedSession = cunits.ImportInBytes(float64(tmp.TotalDownloadedSession))
+	tgp.UploadLimit = cunits.Speed{Bits: cunits.ImportInBytes(float64(tmp.UploadLimit))}
+	tgp.DownloadLimit = cunits.Speed{Bits: cunits.ImportInBytes(float64(tmp.DownloadLimit))}
+	tgp.TimeElapsed = time.Duration(tmp.TimeElapsed) * time.Second
+	tgp.SeedingTime = time.Duration(tmp.SeedingTime) * time.Second
+	tgp.AdditionDate = time.Unix(tmp.AdditionDate, 0)
+	tgp.CompletionDate = time.Unix(tmp.CompletionDate, 0)
+	tgp.DownloadSpeedAvg = cunits.Speed{Bits: cunits.ImportInBytes(float64(tmp.DownloadSpeedAvg))}
+	tgp.DownloadSpeed = cunits.Speed{Bits: cunits.ImportInBytes(float64(tmp.DownloadSpeed))}
+	tgp.ETA = time.Duration(tmp.ETA) * time.Second
+	tgp.LastSeen = time.Unix(tmp.LastSeen, 0)
+	tgp.TotalSize = cunits.ImportInBytes(float64(tmp.TotalSize))
+	tgp.UploadSpeedAvg = cunits.Speed{Bits: cunits.ImportInBytes(float64(tmp.UploadSpeedAvg))}
+	tgp.UploadSpeed = cunits.Speed{Bits: cunits.ImportInBytes(float64(tmp.UploadSpeed))}
+	return
+}
+
+func (tgp *TorrentGenericProperties) MarshalJSON() ([]byte, error) {
+	type mask TorrentGenericProperties
+	tmp := struct {
+		*mask
+		// Custom marshaling
+		CreationDate           int64 `json:"creation_date"`            // Torrent creation date (Unix timestamp)
+		PieceSize              int   `json:"piece_size"`               // Torrent piece size (bytes)
+		TotalWasted            int   `json:"total_wasted"`             // Total data wasted for torrent (bytes)
+		TotalUploaded          int   `json:"total_uploaded"`           // Total data uploaded for torrent (bytes)
+		TotalUploadedSession   int   `json:"total_uploaded_session"`   // Total data uploaded this session (bytes)
+		TotalDownloaded        int   `json:"total_downloaded"`         // Total data downloaded for torrent (bytes)
+		TotalDownloadedSession int   `json:"total_downloaded_session"` // Total data downloaded this session (bytes)
+		UploadLimit            int   `json:"up_limit"`                 // Torrent upload limit (bytes/s)
+		DownloadLimit          int   `json:"dl_limit"`                 // Torrent download limit (bytes/s)
+		TimeElapsed            int   `json:"time_elapsed"`             // Torrent elapsed time (seconds)
+		SeedingTime            int   `json:"seeding_time"`             // Torrent elapsed time while complete (seconds)
+		AdditionDate           int64 `json:"addition_date"`            // When this torrent was added (unix timestamp)
+		CompletionDate         int64 `json:"completion_date"`          // Torrent completion date (unix timestamp)
+		DownloadSpeedAvg       int   `json:"dl_speed_avg"`             // Torrent average download speed (bytes/second)
+		DownloadSpeed          int   `json:"dl_speed"`                 // Torrent download speed (bytes/second)
+		ETA                    int   `json:"eta"`                      // Torrent ETA (seconds)
+		LastSeen               int64 `json:"last_seen"`                // Last seen complete date (unix timestamp)
+		TotalSize              int   `json:"total_size"`               // Torrent total size (bytes)
+		UploadSpeedAvg         int   `json:"up_speed_avg"`             // Torrent average upload speed (bytes/second)
+		UploadSpeed            int   `json:"up_speed"`                 // Torrent upload speed (bytes/second)
+	}{
+		mask:                   (*mask)(tgp),
+		CreationDate:           tgp.CreationDate.Unix(),
+		PieceSize:              int(tgp.PieceSize.Bytes()),
+		TotalWasted:            int(tgp.TotalWasted.Bytes()),
+		TotalUploaded:          int(tgp.TotalUploaded.Bytes()),
+		TotalUploadedSession:   int(tgp.TotalUploadedSession.Bytes()),
+		TotalDownloaded:        int(tgp.TotalDownloaded.Bytes()),
+		TotalDownloadedSession: int(tgp.TotalDownloadedSession.Bytes()),
+		UploadLimit:            int(tgp.UploadLimit.Bits.Bytes()),
+		DownloadLimit:          int(tgp.DownloadLimit.Bits.Bytes()),
+		TimeElapsed:            int(tgp.TimeElapsed.Seconds()),
+		SeedingTime:            int(tgp.SeedingTime.Seconds()),
+		AdditionDate:           tgp.AdditionDate.Unix(),
+		CompletionDate:         tgp.CompletionDate.Unix(),
+		DownloadSpeedAvg:       int(tgp.DownloadSpeedAvg.Bits.Bytes()),
+		DownloadSpeed:          int(tgp.DownloadSpeed.Bits.Bytes()),
+		ETA:                    int(tgp.ETA.Seconds()),
+		LastSeen:               tgp.LastSeen.Unix(),
+		TotalSize:              int(tgp.TotalSize.Bytes()),
+		UploadSpeedAvg:         int(tgp.UploadSpeedAvg.Bits.Bytes()),
+		UploadSpeed:            int(tgp.UploadSpeed.Bits.Bytes()),
+	}
+	return json.Marshal(tmp)
+}

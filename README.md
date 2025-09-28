@@ -153,7 +153,7 @@ If you need more, feel free to open an issue or a PR.
 ### Torrent management
 
 - [x] Get torrent list
-- [ ] Get torrent generic properties
+- [x] Get torrent generic properties
 - [ ] Get torrent trackers
 - [ ] Get torrent web seeds
 - [ ] Get torrent contents
