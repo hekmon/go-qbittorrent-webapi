@@ -90,14 +90,26 @@ func main() {
 	}
 	fmt.Printf("Default save path: %s\n", path)
 
+	// Torrents listing
+	torrents, err := client.GetTorrentList(context.TODO(), &qbtapi.ListFilters{
+		State: qbtapi.FilterStateActive.Ptr(),
+	})
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("%d active torrents:\n", len(torrents))
+	for _, torrent := range torrents {
+		fmt.Printf("\t * %+v\n", torrent)
+	}
+
     // etc...
 }
 ```
 
-## Endpoints implemented
+## Endpoints implementation
 
 Not all endpoints are implemented, only the ones I needed for my own usage.
-But global architecture is ready and adding more endpoints should be easy.
+But global software architecture is ready and adding more endpoints should be easy.
 If you need more, feel free to open an issue or a PR.
 
 ### Authentication
@@ -140,7 +152,7 @@ If you need more, feel free to open an issue or a PR.
 
 ### Torrent management
 
-- [ ] Get torrent list
+- [x] Get torrent list
 - [ ] Get torrent generic properties
 - [ ] Get torrent trackers
 - [ ] Get torrent web seeds
