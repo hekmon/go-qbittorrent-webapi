@@ -495,7 +495,9 @@ func (tgp *TorrentGenericProperties) MarshalJSON() ([]byte, error) {
 // https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#get-torrent-trackers
 func (c *Client) GetTorrentTrackers(ctx context.Context, hash string) (trackers []TorrentTracker, err error) {
 	// build request
-	req, err := c.requestBuild(ctx, "GET", torrentsAPIName, "trackers", map[string]string{"hash": hash})
+	req, err := c.requestBuild(ctx, "GET", torrentsAPIName, "trackers", map[string]string{
+		"hash": hash,
+	})
 	if err != nil {
 		err = fmt.Errorf("request building failure: %w", err)
 		return

@@ -106,12 +106,10 @@ func (c *Client) SetApplicationPreferences(ctx context.Context, appPrefs Applica
 		err = fmt.Errorf("marshaling preferences failed: %w", err)
 		return
 	}
-	// Then we can encapsulate it on the expected format
-	payload := map[string]string{
-		"json": string(data),
-	}
 	// Continue normally
-	req, err := c.requestBuild(ctx, "POST", applicationAPIName, "setPreferences", payload)
+	req, err := c.requestBuild(ctx, "POST", applicationAPIName, "setPreferences", map[string]string{
+		"json": string(data),
+	})
 	if err != nil {
 		err = fmt.Errorf("building request failed: %w", err)
 		return
@@ -552,12 +550,10 @@ func (c *Client) SetCookies(ctx context.Context, cookies []Cookie) (err error) {
 		err = fmt.Errorf("marshaling cookies failed: %w", err)
 		return
 	}
-	// Then we can encapsulate it on the expected format (not working, dunno how the JSON is expected by qBt)
-	payload := map[string]string{
-		"": string(data),
-	}
 	// Continue normally
-	req, err := c.requestBuild(ctx, "POST", applicationAPIName, "setCookies", payload)
+	req, err := c.requestBuild(ctx, "POST", applicationAPIName, "setCookies", map[string]string{
+		"": string(data),
+	})
 	if err != nil {
 		err = fmt.Errorf("building request failed: %w", err)
 		return
