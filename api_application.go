@@ -50,6 +50,9 @@ type BuildInfo struct {
 	Boost      string `json:"boost"`      // Boost version
 	OpenSSL    string `json:"openssl"`    // OpenSSL version
 	Bitness    int    `json:"bitness"`    // Application bitness (e.g. 64-bit)
+	// undocumented
+	Platform string `json:"platform"` // Platform (eg Linux)
+	Zlib     string `json:"zlib"`     // zlib version
 }
 
 // GetBuildInfo returns compilation informations of target server.
