@@ -638,6 +638,7 @@ func (c *Client) AddNewTorrents(ctx context.Context, files map[string][]byte, ur
 		return
 	}
 	req.Header.Set(contentTypeHeader, contentType)
+	req.Header.Set(contentLenHeader, strconv.Itoa(payload.Len()))
 	req.Body = io.NopCloser(&payload)
 	// execute request
 	if err = c.requestExecute(req, &trackers, true); err != nil {
