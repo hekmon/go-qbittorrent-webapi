@@ -700,12 +700,8 @@ func torrentAddGeneratePayload(files map[string][]byte, urls []*url.URL, options
 		}
 		strURLs[index] = tURL.String()
 	}
-	if mpw, err = mp.CreateFormField("urls"); err != nil {
-		err = fmt.Errorf("failed to create form field: %w", err)
-		return
-	}
-	if _, err = mpw.Write([]byte(strings.Join(strURLs, "\n"))); err != nil {
-		err = fmt.Errorf("failed to write URLs to form field: %w", err)
+	if err = mp.WriteField("urls", strings.Join(strURLs, "\n")); err != nil {
+		err = fmt.Errorf("failed to write savepath to form field: %w", err)
 		return
 	}
 	// Handles options
