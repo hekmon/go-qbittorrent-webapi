@@ -15,7 +15,6 @@ import (
 const (
 	apiPrefix                     = "api/v2"
 	originHeader                  = "Origin"
-	contentLenHeader              = "Content-Length"
 	contentTypeHeader             = "Content-Type"
 	contentTypeHeaderFormURL      = "application/x-www-form-urlencoded"
 	contentTypeHeaderTextPlain    = "text/plain"
