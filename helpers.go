@@ -1,7 +1,12 @@
 package qbtapi
 
 import (
+	"fmt"
+	"io"
 	"math"
+	"mime/multipart"
+	"net/textproto"
+	"strings"
 
 	"github.com/hekmon/cunits/v3"
 )
@@ -60,4 +65,13 @@ func GetSpeedFromBytes(bytes int) Speed {
 	default:
 		return Speed{cunits.Speed{Bits: cunits.ImportInBytes(float64(bytes))}}
 	}
+}
+
+var quoteEscaper = strings.NewReplacer("\\", "\\\\", `"`, "\\\"")
+
+func createBtFormFile(w *multipart.Writer, filename string) (io.Writer, error) {
+	h := make(textproto.MIMEHeader, 2)
+	h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="torrents"; filename="%s"`, quoteEscaper.Replace(filename)))
+	h.Set("Content-Type", "application/x-bittorrent")
+	return w.CreatePart(h)
 }

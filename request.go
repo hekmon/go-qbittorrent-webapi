@@ -9,7 +9,6 @@ import (
 	"net/url"
 	"path"
 	"reflect"
-	"strconv"
 	"strings"
 )
 
@@ -64,8 +63,8 @@ func (c *Client) requestBuild(ctx context.Context, method, APIName, APIMethodNam
 	}
 	if body != nil {
 		// if parameters has been set as body, adapt headers
+		request.ContentLength = int64(len(encodedParameters))
 		request.Header.Set(contentTypeHeader, contentTypeHeaderFormURL)
-		request.Header.Set(contentLenHeader, strconv.Itoa(len(encodedParameters)))
 	}
 	return
 }

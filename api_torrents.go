@@ -637,23 +637,42 @@ func (c *Client) AddNewTorrents(ctx context.Context, files map[string][]byte, ur
 		err = fmt.Errorf("request building failure: %w", err)
 		return
 	}
-	req.Header.Set(contentTypeHeader, contentType)
-	req.Header.Set(contentLenHeader, strconv.Itoa(payload.Len()))
 	req.Body = io.NopCloser(&payload)
+	req.ContentLength = int64(payload.Len())
+	req.Header.Set(contentTypeHeader, contentType)
 	// execute request
-	if err = c.requestExecute(req, nil, true); err != nil {
+	var output string
+	if err = c.requestExecute(req, &output, true); err != nil {
 		err = fmt.Errorf("executing request failed: %w", err)
+		return
+	}
+	if output != "Ok." {
+		err = fmt.Errorf("unexpected server response: %s", output)
+		return
 	}
 	return
 }
 
 func torrentAddGeneratePayload(files map[string][]byte, urls []*url.URL, options *AddNewTorrentsOptions) (payload bytes.Buffer, contentType string, err error) {
 	mp := multipart.NewWriter(&payload)
+	defer func() {
+		if err = mp.Close(); err != nil {
+			err = fmt.Errorf("failed to close multipart writer: %w", err)
+		}
+	}()
 	contentType = mp.FormDataContentType()
 	// Add raw files
 	var mpw io.Writer
 	for filename, content := range files {
-		if mpw, err = mp.CreateFormFile("torrents", filename); err != nil {
+		if filepath.Ext(filename) != ".torrent" {
+			err = fmt.Errorf("file %q is not a .torrent file", filename)
+			return
+		}
+		if len(content) == 0 {
+			err = fmt.Errorf("file %q is empty", filename)
+			return
+		}
+		if mpw, err = createBtFormFile(mp, filename); err != nil {
 			err = fmt.Errorf("failed to create form file %s: %w", filename, err)
 			return
 		}
@@ -666,6 +685,10 @@ func torrentAddGeneratePayload(files map[string][]byte, urls []*url.URL, options
 	strURLs := make([]string, len(urls))
 	for index, tURL := range urls {
 		// check URL
+		if tURL == nil {
+			err = fmt.Errorf("nil URL")
+			return
+		}
 		switch tURL.Scheme {
 		case "http", "https":
 			if tURL.Host == "" {
