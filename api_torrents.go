@@ -131,7 +131,7 @@ type TorrentInfos struct {
 	Hash               string        `json:"hash"`               // Torrent hash
 	Private            bool          `json:"isPrivate"`          // True if torrent is from a private tracker
 	LastActivity       time.Time     `json:"last_activity"`      // Last time when a chunk was downloaded/uploaded
-	MagnetURI          string        `json:"magnet_uri"`         // Magnet URI corresponding to this torrent
+	MagnetURI          *url.URL      `json:"magnet_uri"`         // Magnet URI corresponding to this torrent (use .Query() to access values)
 	MaxRatio           float64       `json:"max_ratio"`          // Maximum share ratio until torrent is stopped from seeding/uploading
 	MaxSeedingTime     time.Duration `json:"max_seeding_time"`   // Maximum seeding time until torrent is stopped from seeding
 	Name               string        `json:"name"`               // Torrent name
@@ -177,6 +177,7 @@ func (ti *TorrentInfos) UnmarshalJSON(data []byte) (err error) {
 		DownloadedSession  int    `json:"downloaded_session"` // Amount of data downloaded this session
 		ETA                int    `json:"eta"`                // Torrent ETA (seconds)
 		LastActivity       int64  `json:"last_activity"`      // Last time (Unix Epoch) when a chunk was downloaded/uploaded
+		MagnetURI          string `json:"magnet_uri"`         // Magnet URI corresponding to this torrent
 		MaxSeedingTime     int    `json:"max_seeding_time"`   // Maximum seeding time (seconds) until torrent is stopped from seeding
 		Reannounce         int    `json:"reannounce"`         // Time until the next tracker reannounce
 		SeedingTime        int    `json:"seeding_time"`       // Torrent elapsed time while complete (seconds)
@@ -208,6 +209,9 @@ func (ti *TorrentInfos) UnmarshalJSON(data []byte) (err error) {
 	ti.DownloadedSession = cunits.ImportInBytes(float64(tmp.DownloadedSession))
 	ti.ETA = time.Duration(tmp.ETA) * time.Second
 	ti.LastActivity = time.Unix(tmp.LastActivity, 0)
+	if ti.MagnetURI, err = url.Parse(tmp.MagnetURI); err != nil {
+		return fmt.Errorf("failed to parse magnet URI: %w", err)
+	}
 	ti.MaxSeedingTime = time.Duration(tmp.MaxSeedingTime) * time.Second
 	ti.Reannounce = time.Duration(tmp.Reannounce) * time.Second
 	ti.SeedingTime = time.Duration(tmp.SeedingTime) * time.Second
@@ -239,6 +243,7 @@ func (ti *TorrentInfos) MarshalJSON() ([]byte, error) {
 		DownloadedSession  int    `json:"downloaded_session"` // Amount of data downloaded this session
 		ETA                int    `json:"eta"`                // Torrent ETA (seconds)
 		LastActivity       int64  `json:"last_activity"`      // Last time (Unix Epoch) when a chunk was downloaded/uploaded
+		MagnetURI          string `json:"magnet_uri"`         // Magnet URI corresponding to this torrent
 		MaxSeedingTime     int    `json:"max_seeding_time"`   // Maximum seeding time (seconds) until torrent is stopped from seeding
 		Reannounce         int    `json:"reannounce"`         // Time until the next tracker reannounce
 		SeedingTime        int    `json:"seeding_time"`       // Torrent elapsed time while complete (seconds)
@@ -266,6 +271,7 @@ func (ti *TorrentInfos) MarshalJSON() ([]byte, error) {
 	tmp.DownloadedSession = int(ti.DownloadedSession.Bytes())
 	tmp.ETA = int(ti.ETA.Seconds())
 	tmp.LastActivity = ti.LastActivity.Unix()
+	tmp.MagnetURI = ti.MagnetURI.String()
 	tmp.MaxSeedingTime = int(ti.MaxSeedingTime.Seconds())
 	tmp.Reannounce = int(ti.Reannounce.Seconds())
 	tmp.SeedingTime = int(ti.SeedingTime.Seconds())
