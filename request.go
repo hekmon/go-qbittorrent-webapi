@@ -15,6 +15,8 @@ import (
 const (
 	apiPrefix                     = "api/v2"
 	originHeader                  = "Origin"
+	userAgentHeader               = "User-Agent"
+	userAgentValue                = "github.com/hekmon/go-qbittorrent-webapi"
 	contentTypeHeader             = "Content-Type"
 	contentTypeHeaderFormURL      = "application/x-www-form-urlencoded"
 	contentTypeHeaderTextPlain    = "text/plain"
@@ -60,6 +62,7 @@ func (c *Client) requestBuild(ctx context.Context, method, APIName, APIMethodNam
 	if request, err = http.NewRequestWithContext(ctx, method, requestURL.String(), body); err != nil {
 		return
 	}
+	request.Header.Set(userAgentHeader, userAgentValue)
 	if body != nil {
 		// if parameters has been set as body, adapt headers
 		request.ContentLength = int64(len(encodedParameters))
