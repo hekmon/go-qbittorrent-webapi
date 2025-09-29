@@ -1,10 +1,15 @@
 package qbtapi
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"mime/multipart"
 	"net/url"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
@@ -573,4 +578,223 @@ func (tts TorrentTrackerStatus) String() string {
 	default:
 		return strconv.Itoa(int(tts))
 	}
+}
+
+/*
+	new torrents
+*/
+
+// ReadTorrentsFiles reads the content of all files in the provided paths and returns a map of filename to content.
+// Helper function for AddNewTorrents().
+func ReadTorrentsFiles(paths []string) (content map[string][]byte, err error) {
+	content = make(map[string][]byte, len(paths))
+	for _, path := range paths {
+		var fileContent []byte
+		if fileContent, err = os.ReadFile(path); err != nil {
+			err = fmt.Errorf("unable to read file %q: %w", path, err)
+			return
+		}
+		content[filepath.Base(path)] = fileContent
+	}
+	return
+}
+
+// AddNewTorrentsOptions holds options for adding new torrents.
+type AddNewTorrentsOptions struct {
+	SavePath               *string        // Download folder
+	Category               *string        // Category for the torrent
+	Tags                   []string       // Tags for the torrent
+	SkipChecking           *bool          // Skip hash checking
+	Paused                 *bool          // Add torrents in the paused state
+	RootFolder             *bool          // Create the root folder
+	Rename                 *string        // Rename torrent
+	UploadLimit            *Speed         // Set torrent upload speed limit (/sec)
+	DownloadLimit          *Speed         // Set torrent download speed limit (/sec)
+	RatioLimit             *float64       // Set torrent share ratio limit (since 2.8.1)
+	SeedingTimeLimit       *time.Duration // Set torrent seeding time limit (since 2.8.1) (will be converted to minutes)
+	AutoTMM                *bool          // Whether Automatic Torrent Management should be used
+	SequentialDownload     *bool          // Enable sequential download
+	FirstLastPiecePriority *bool          // Prioritize download first last piece
+}
+
+// AddNewTorrents adds new torrents. There must be at least one file content or URL.
+// Check the ReadTorrentsFiles() helper for files content. options can be nil.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#add-new-torrent
+func (c *Client) AddNewTorrents(ctx context.Context, files map[string][]byte, urls []*url.URL, options *AddNewTorrentsOptions) (trackers []TorrentTracker, err error) {
+	if len(files) == 0 && len(urls) == 0 {
+		err = fmt.Errorf("no files or urls provided")
+		return
+	}
+	// build payload
+	payload, contentType, err := torrentAddGeneratePayload(files, urls, options)
+	if err != nil {
+		err = fmt.Errorf("payload generation failure: %w", err)
+		return
+	}
+	// build request
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "add", nil)
+	if err != nil {
+		err = fmt.Errorf("request building failure: %w", err)
+		return
+	}
+	req.Header.Set(contentTypeHeader, contentType)
+	req.Body = io.NopCloser(&payload)
+	// execute request
+	if err = c.requestExecute(req, &trackers, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+func torrentAddGeneratePayload(files map[string][]byte, urls []*url.URL, options *AddNewTorrentsOptions) (payload bytes.Buffer, contentType string, err error) {
+	mp := multipart.NewWriter(&payload)
+	contentType = mp.FormDataContentType()
+	// Add raw files
+	var mpw io.Writer
+	for filename, content := range files {
+		if mpw, err = mp.CreateFormFile("torrents", filename); err != nil {
+			err = fmt.Errorf("failed to create form file %s: %w", filename, err)
+			return
+		}
+		if _, err = mpw.Write(content); err != nil {
+			err = fmt.Errorf("failed to write file %q content: %w", filename, err)
+			return
+		}
+	}
+	// Add URLs
+	strURLs := make([]string, len(urls))
+	for index, tURL := range urls {
+		// check URL
+		switch tURL.Scheme {
+		case "http", "https":
+			if tURL.Host == "" {
+				err = fmt.Errorf("invalid URL %q: missing host", tURL.String())
+				return
+			}
+			if tURL.Path == "" {
+				err = fmt.Errorf("invalid URL %q: missing path", tURL.String())
+				return
+			}
+		case "magnet":
+			if tURL.Host != "" {
+				err = fmt.Errorf("invalid URL %q: magnet URL should not have a host", tURL.String())
+				return
+			}
+			if tURL.Path != "" {
+				err = fmt.Errorf("invalid URL %q: magnet URL should not have a path", tURL.String())
+				return
+			}
+			if !tURL.Query().Has("xt") {
+				err = fmt.Errorf("invalid URI %q: magnet URI should have an xt parameter", tURL.String())
+				return
+			}
+		case "bc":
+			// bc ??
+			if tURL.Host != "bt" {
+				err = fmt.Errorf("invalid URL %q: invalid host for bc protocol", tURL.String())
+				return
+			}
+		default:
+			err = fmt.Errorf("invalid URL %q: unsupported protocol", tURL.String())
+			return
+		}
+		strURLs[index] = tURL.String()
+	}
+	if mpw, err = mp.CreateFormField("urls"); err != nil {
+		err = fmt.Errorf("failed to create form field: %w", err)
+		return
+	}
+	if _, err = mpw.Write([]byte(strings.Join(strURLs, "\n"))); err != nil {
+		err = fmt.Errorf("failed to write URLs to form field: %w", err)
+		return
+	}
+	// Handles options
+	if options == nil {
+		return
+	}
+	if options.SavePath != nil {
+		if err = mp.WriteField("savepath", *options.SavePath); err != nil {
+			err = fmt.Errorf("failed to write savepath to form field: %w", err)
+			return
+		}
+	}
+	if options.Category != nil {
+		if err = mp.WriteField("category", *options.Category); err != nil {
+			err = fmt.Errorf("failed to write category to form field: %w", err)
+			return
+		}
+	}
+	if options.Tags != nil {
+		if err = mp.WriteField("tags", strings.Join(options.Tags, ",")); err != nil {
+			err = fmt.Errorf("failed to write tags to form field: %w", err)
+			return
+		}
+	}
+	if options.SkipChecking != nil {
+		if err = mp.WriteField("skip_checking", strconv.FormatBool(*options.SkipChecking)); err != nil {
+			err = fmt.Errorf("failed to write skip_checking to form field: %w", err)
+			return
+		}
+	}
+	if options.Paused != nil {
+		if err = mp.WriteField("paused", strconv.FormatBool(*options.Paused)); err != nil {
+			err = fmt.Errorf("failed to write paused to form field: %w", err)
+			return
+		}
+	}
+	if options.RootFolder != nil {
+		if err = mp.WriteField("root_folder", strconv.FormatBool(*options.RootFolder)); err != nil {
+			err = fmt.Errorf("failed to write root_folder to form field: %w", err)
+			return
+		}
+	}
+	if options.Rename != nil {
+		if err = mp.WriteField("rename", *options.Rename); err != nil {
+			err = fmt.Errorf("failed to write rename to form field: %w", err)
+			return
+		}
+	}
+	if options.UploadLimit != nil {
+		if err = mp.WriteField("upLimit", strconv.Itoa(options.UploadLimit.ToBytes())); err != nil {
+			err = fmt.Errorf("failed to write upLimit to form field: %w", err)
+			return
+		}
+	}
+	if options.DownloadLimit != nil {
+		if err = mp.WriteField("dlLimit", strconv.Itoa(options.DownloadLimit.ToBytes())); err != nil {
+			err = fmt.Errorf("failed to write dlLimit to form field: %w", err)
+			return
+		}
+	}
+	if options.RatioLimit != nil {
+		if err = mp.WriteField("ratioLimit", strconv.FormatFloat(*options.RatioLimit, 'f', -1, 64)); err != nil {
+			err = fmt.Errorf("failed to write ratioLimit to form field: %w", err)
+			return
+		}
+	}
+	if options.SeedingTimeLimit != nil {
+		if err = mp.WriteField("seedingTimeLimit", strconv.Itoa(int(options.SeedingTimeLimit.Minutes()))); err != nil {
+			err = fmt.Errorf("failed to write seedingTimeLimit to form field: %w", err)
+			return
+		}
+	}
+	if options.AutoTMM != nil {
+		if err = mp.WriteField("autoTMM", strconv.FormatBool(*options.AutoTMM)); err != nil {
+			err = fmt.Errorf("failed to write autoTMM to form field: %w", err)
+			return
+		}
+	}
+	if options.SequentialDownload != nil {
+		if err = mp.WriteField("sequentialDownload", strconv.FormatBool(*options.SequentialDownload)); err != nil {
+			err = fmt.Errorf("failed to write sequentialDownload to form field: %w", err)
+			return
+		}
+	}
+	if options.FirstLastPiecePriority != nil {
+		if err = mp.WriteField("firstLastPiecePrio", strconv.FormatBool(*options.FirstLastPiecePriority)); err != nil {
+			err = fmt.Errorf("failed to write firstLastPiecePrio to form field: %w", err)
+			return
+		}
+	}
+	return
 }

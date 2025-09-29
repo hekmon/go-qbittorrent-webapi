@@ -167,7 +167,7 @@ If you need more, feel free to open an issue or a PR.
 - [ ] Edit trackers
 - [ ] Remove trackers
 - [ ] Add peers
-- [ ] Add new torrent
+- [x] Add new torrent
 - [ ] Add trackers to torrent
 - [ ] Increase torrent priority
 - [ ] Decrease torrent priority
