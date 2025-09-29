@@ -620,9 +620,9 @@ type AddNewTorrentsOptions struct {
 // AddNewTorrents adds new torrents. There must be at least one file content or URL.
 // Check the ReadTorrentsFiles() helper for files content. options can be nil.
 // https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#add-new-torrent
-func (c *Client) AddNewTorrents(ctx context.Context, files map[string][]byte, urls []*url.URL, options *AddNewTorrentsOptions) (trackers []TorrentTracker, err error) {
+func (c *Client) AddNewTorrents(ctx context.Context, files map[string][]byte, urls []*url.URL, options *AddNewTorrentsOptions) (err error) {
 	if len(files) == 0 && len(urls) == 0 {
-		err = fmt.Errorf("no files or urls provided")
+		err = fmt.Errorf("no files or URLs provided")
 		return
 	}
 	// build payload
@@ -641,7 +641,7 @@ func (c *Client) AddNewTorrents(ctx context.Context, files map[string][]byte, ur
 	req.Header.Set(contentLenHeader, strconv.Itoa(payload.Len()))
 	req.Body = io.NopCloser(&payload)
 	// execute request
-	if err = c.requestExecute(req, &trackers, true); err != nil {
+	if err = c.requestExecute(req, nil, true); err != nil {
 		err = fmt.Errorf("executing request failed: %w", err)
 	}
 	return
