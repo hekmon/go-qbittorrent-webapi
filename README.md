@@ -161,7 +161,7 @@ If you need more, feel free to open an issue or a PR.
 - [ ] Get torrent pieces' hashes
 - [ ] Pause torrents
 - [ ] Resume torrents
-- [ ] Delete torrents
+- [x] Delete torrents
 - [ ] Recheck torrents
 - [ ] Reannounce torrents
 - [ ] Edit trackers

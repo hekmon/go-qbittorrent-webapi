@@ -581,6 +581,30 @@ func (tts TorrentTrackerStatus) String() string {
 }
 
 /*
+	delete torrents
+*/
+
+// DeleteTorrents delete one or more torrents.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#delete-torrents
+func (c *Client) DeleteTorrents(ctx context.Context, hashes []string, deleteFiles bool) (err error) {
+	// build request
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "delete", map[string]string{
+		"hashes":      strings.Join(hashes, "|"),
+		"deleteFiles": strconv.FormatBool(deleteFiles),
+	})
+	if err != nil {
+		err = fmt.Errorf("request building failure: %w", err)
+		return
+	}
+	// execute request
+	if err = c.requestExecute(req, nil, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+		return
+	}
+	return
+}
+
+/*
 	new torrents
 */
 
