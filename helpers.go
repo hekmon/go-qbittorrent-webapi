@@ -30,7 +30,8 @@ func Bool(value bool) *bool {
 }
 
 var (
-	unlimitedSpeedLimit = Speed{cunits.Speed{Bits: math.MaxUint64}}
+	// UnlimitedSpeedLimit is a special value for qBittorrent when applying limits
+	UnlimitedSpeedLimit = Speed{cunits.Speed{Bits: math.MaxUint64}}
 )
 
 // Speed wraps cunits.Speed to provide a custom String() method to handle "unlimited" value representation.
@@ -39,7 +40,7 @@ type Speed struct {
 }
 
 func (s Speed) Unlimited() bool {
-	return s == unlimitedSpeedLimit
+	return s == UnlimitedSpeedLimit
 }
 
 func (s Speed) ToBytes() int {
@@ -61,7 +62,7 @@ func (s Speed) String() string {
 func GetSpeedFromBytes(bytes int) Speed {
 	switch bytes {
 	case -1:
-		return unlimitedSpeedLimit
+		return UnlimitedSpeedLimit
 	default:
 		return Speed{cunits.Speed{Bits: cunits.ImportInBytes(float64(bytes))}}
 	}
