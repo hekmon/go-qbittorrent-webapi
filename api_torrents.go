@@ -682,8 +682,10 @@ func (c *Client) AddNewTorrents(ctx context.Context, files map[string][]byte, ur
 func torrentAddGeneratePayload(files map[string][]byte, urls []*url.URL, options *AddNewTorrentsOptions) (payload bytes.Buffer, contentType string, err error) {
 	mp := multipart.NewWriter(&payload)
 	defer func() {
-		if err = mp.Close(); err != nil {
-			err = fmt.Errorf("failed to close multipart writer: %w", err)
+		if err == nil {
+			if err = mp.Close(); err != nil {
+				err = fmt.Errorf("failed to close multipart writer: %w", err)
+			}
 		}
 	}()
 	contentType = mp.FormDataContentType()
