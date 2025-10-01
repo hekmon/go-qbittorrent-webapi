@@ -668,8 +668,9 @@ func (c *Client) AddNewTorrents(ctx context.Context, files map[string][]byte, ur
 	req.Header.Set(contentTypeHeader, contentType)
 	// Fix for go client not detecting content length from payload for an unknown reason
 	// This should not normally be needed with a *bytes.Buffer as http.NewRequest(WithContext) uses reflect and
-	// should handle the ContentLength properly, but actually the detection does not seems to work so ContentLength is not set,
-	// and with an unknown content len and a body to send go http client will switch to chunked content encoding and qbt webserver does not support it
+	// should handle the ContentLength properly, but actually the detection does not seem to work and so ContentLength
+	// is not set: with an unknown content len and a body to send go http client will switch to chunked content encoding
+	// that the qbt webserver does not support, leading to a request failure
 	req.ContentLength = int64(payload.Len())
 	// execute request
 	var output string
