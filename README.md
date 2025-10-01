@@ -83,13 +83,6 @@ func main() {
 	}
 	fmt.Printf("qBittorrent new application preferences:\n%s\n\n", appPrefs)
 
-	// Default save path
-	path, err := client.GetDefaultSavePath(context.TODO())
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("Default save path: %s\n", path)
-
 	// Torrents listing
 	torrents, err := client.GetTorrentList(context.TODO(), &qbtapi.ListFilters{
 		State: qbtapi.FilterStateActive.Ptr(),
@@ -102,7 +95,39 @@ func main() {
 		fmt.Printf("\t * %+v\n", torrent)
 	}
 
-    // etc...
+    // Add torrents
+	files, err := qbtapi.ReadTorrentsFiles([]string{"/mnt/d/Downloads/ubuntu-25.04-desktop-amd64.iso.torrent"})
+	if err != nil {
+		panic(err)
+	}
+	trURL, err := url.Parse("https://releases.ubuntu.com/25.04/ubuntu-25.04-live-server-amd64.iso.torrent")
+	if err != nil {
+		panic(err)
+	}
+	err = client.AddNewTorrents(context.TODO(), files, []*url.URL{trURL}, &qbtapi.AddNewTorrentsOptions{
+		Paused: qbtapi.Bool(true),
+	})
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("torrents added")
+	time.Sleep(3 * time.Second)
+	
+	// List all torrents for deletion
+	torrents, err := client.GetTorrentList(context.TODO(), nil)
+	if err != nil {
+		panic(err)
+	}
+	hashes := make([]string, len(torrents))
+	for index, torrent := range torrents {
+		hashes[index] = torrent.Hash
+	}
+	if err = client.DeleteTorrents(context.TODO(), hashes, true); err != nil {
+		panic(err)
+	}
+	fmt.Printf("Deleted %d torrents\n", len(hashes))
+
+	// etc...
 }
 ```
 
