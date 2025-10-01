@@ -18,7 +18,7 @@ const (
 // GetApplicationVersion returns the application version.
 // https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#get-application-version
 func (c *Client) GetApplicationVersion(ctx context.Context) (version string, err error) {
-	req, err := c.requestBuild(ctx, "GET", applicationAPIName, "version", nil)
+	req, err := c.requestBuild(ctx, "GET", applicationAPIName, "version", nil, nil)
 	if err != nil {
 		err = fmt.Errorf("building request failed: %w", err)
 		return
@@ -32,7 +32,7 @@ func (c *Client) GetApplicationVersion(ctx context.Context) (version string, err
 // GetAPIVersion returns the WebAPI version.
 // https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#get-api-version
 func (c *Client) GetAPIVersion(ctx context.Context) (version string, err error) {
-	req, err := c.requestBuild(ctx, "GET", applicationAPIName, "webapiVersion", nil)
+	req, err := c.requestBuild(ctx, "GET", applicationAPIName, "webapiVersion", nil, nil)
 	if err != nil {
 		err = fmt.Errorf("building request failed: %w", err)
 		return
@@ -58,7 +58,7 @@ type BuildInfo struct {
 // GetBuildInfo returns compilation informations of target server.
 // https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#get-build-info
 func (c *Client) GetBuildInfo(ctx context.Context) (infos BuildInfo, err error) {
-	req, err := c.requestBuild(ctx, "GET", applicationAPIName, "buildInfo", nil)
+	req, err := c.requestBuild(ctx, "GET", applicationAPIName, "buildInfo", nil, nil)
 	if err != nil {
 		err = fmt.Errorf("building request failed: %w", err)
 		return
@@ -72,7 +72,7 @@ func (c *Client) GetBuildInfo(ctx context.Context) (infos BuildInfo, err error) 
 // Shutdown stops the remote server.
 // https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#shutdown-application
 func (c *Client) Shutdown(ctx context.Context) (err error) {
-	req, err := c.requestBuild(ctx, "POST", applicationAPIName, "shutdown", nil)
+	req, err := c.requestBuild(ctx, "POST", applicationAPIName, "shutdown", nil, nil)
 	if err != nil {
 		err = fmt.Errorf("building request failed: %w", err)
 		return
@@ -86,7 +86,7 @@ func (c *Client) Shutdown(ctx context.Context) (err error) {
 // GetApplicationPreferences retrieves the application preferences.
 // https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#get-application-preferences
 func (c *Client) GetApplicationPreferences(ctx context.Context) (appPrefs ApplicationPreferences, err error) {
-	req, err := c.requestBuild(ctx, "GET", applicationAPIName, "preferences", nil)
+	req, err := c.requestBuild(ctx, "GET", applicationAPIName, "preferences", nil, nil)
 	if err != nil {
 		err = fmt.Errorf("building request failed: %w", err)
 		return
@@ -109,7 +109,7 @@ func (c *Client) SetApplicationPreferences(ctx context.Context, appPrefs Applica
 	// Continue normally
 	req, err := c.requestBuild(ctx, "POST", applicationAPIName, "setPreferences", map[string]string{
 		"json": string(data),
-	})
+	}, nil)
 	if err != nil {
 		err = fmt.Errorf("building request failed: %w", err)
 		return
@@ -504,7 +504,7 @@ func (u UTPTCPMixedMode) String() string {
 // GetDefaultSavePath retrieves the default save path.
 // https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#get-default-save-path
 func (c *Client) GetDefaultSavePath(ctx context.Context) (path string, err error) {
-	req, err := c.requestBuild(ctx, "GET", applicationAPIName, "defaultSavePath", nil)
+	req, err := c.requestBuild(ctx, "GET", applicationAPIName, "defaultSavePath", nil, nil)
 	if err != nil {
 		err = fmt.Errorf("building request failed: %w", err)
 		return
@@ -529,7 +529,7 @@ type Cookie struct {
 // GetCookies returns the cookies that are sent by qBittorrent when downloading .torrent files.
 // https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#get-cookies
 func (c *Client) GetCookies(ctx context.Context) (cookies []Cookie, err error) {
-	req, err := c.requestBuild(ctx, "GET", applicationAPIName, "cookies", nil)
+	req, err := c.requestBuild(ctx, "GET", applicationAPIName, "cookies", nil, nil)
 	if err != nil {
 		err = fmt.Errorf("building request failed: %w", err)
 		return
@@ -553,7 +553,7 @@ func (c *Client) SetCookies(ctx context.Context, cookies []Cookie) (err error) {
 	// Continue normally
 	req, err := c.requestBuild(ctx, "POST", applicationAPIName, "setCookies", map[string]string{
 		"": string(data),
-	})
+	}, nil)
 	if err != nil {
 		err = fmt.Errorf("building request failed: %w", err)
 		return

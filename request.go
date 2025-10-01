@@ -3,6 +3,7 @@ package qbtapi
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -24,13 +25,12 @@ const (
 	contentTypeHeaderJSON         = "application/json"
 )
 
-func (c *Client) requestBuild(ctx context.Context, method, APIName, APIMethodName string, parameters map[string]string) (request *http.Request, err error) {
+func (c *Client) requestBuild(ctx context.Context, method, APIName, APIMethodName string, parameters map[string]string, body io.Reader) (request *http.Request, err error) {
 	// build URL
 	requestURL := *c.url
 	requestURL.Path = path.Join(requestURL.Path, apiPrefix, APIName, APIMethodName)
 	// prepare query parameters
 	var (
-		body              io.Reader
 		encodedParameters string
 	)
 	if parameters != nil {
@@ -53,11 +53,25 @@ func (c *Client) requestBuild(ctx context.Context, method, APIName, APIMethodNam
 		// set params as query or body depending on method
 		switch strings.ToUpper(method) {
 		case "GET":
+			if body != nil {
+				err = errors.New("cannot build request: body is not nil for GET request")
+				return
+			}
 			requestURL.RawQuery = encodedParameters
 		case "POST":
-			body = strings.NewReader(encodedParameters)
+			if body == nil {
+				// body is nil, pushing urlencoded parameters as body
+				body = strings.NewReader(encodedParameters)
+			} else {
+				// we already have a body to send, set the parameters as query
+				requestURL.RawQuery = encodedParameters
+			}
+		default:
+			err = fmt.Errorf("cannot build request: unsupported method %s", method)
+			return
 		}
 	}
+	fmt.Println(APIName, APIMethodName, reflect.TypeOf(body))
 	// build http request
 	if request, err = http.NewRequestWithContext(ctx, method, requestURL.String(), body); err != nil {
 		return

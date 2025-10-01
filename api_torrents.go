@@ -103,7 +103,7 @@ func (c *Client) GetTorrentList(ctx context.Context, filters *ListFilters) (list
 		preparedFilters = filters.getLowLevelRepr()
 	}
 	// build request
-	req, err := c.requestBuild(ctx, "GET", torrentsAPIName, "info", preparedFilters)
+	req, err := c.requestBuild(ctx, "GET", torrentsAPIName, "info", preparedFilters, nil)
 	if err != nil {
 		err = fmt.Errorf("request building failure: %w", err)
 		return
@@ -325,7 +325,9 @@ const (
 // https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#get-torrent-generic-properties
 func (c *Client) GetTorrentGenericProperties(ctx context.Context, hash string) (torrentProperties TorrentGenericProperties, err error) {
 	// build request
-	req, err := c.requestBuild(ctx, "GET", torrentsAPIName, "properties", map[string]string{"hash": hash})
+	req, err := c.requestBuild(ctx, "GET", torrentsAPIName, "properties", map[string]string{
+		"hash": hash,
+	}, nil)
 	if err != nil {
 		err = fmt.Errorf("request building failure: %w", err)
 		return
@@ -497,7 +499,7 @@ func (c *Client) GetTorrentTrackers(ctx context.Context, hash string) (trackers 
 	// build request
 	req, err := c.requestBuild(ctx, "GET", torrentsAPIName, "trackers", map[string]string{
 		"hash": hash,
-	})
+	}, nil)
 	if err != nil {
 		err = fmt.Errorf("request building failure: %w", err)
 		return
@@ -593,7 +595,7 @@ func (c *Client) DeleteTorrents(ctx context.Context, hashes []string, deleteFile
 	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "delete", map[string]string{
 		"hashes":      strings.Join(hashes, "|"),
 		"deleteFiles": strconv.FormatBool(deleteFiles),
-	})
+	}, nil)
 	if err != nil {
 		err = fmt.Errorf("request building failure: %w", err)
 		return
@@ -658,13 +660,12 @@ func (c *Client) AddNewTorrents(ctx context.Context, files map[string][]byte, ur
 		return
 	}
 	// build request
-	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "add", nil)
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "add", nil, &payload)
 	if err != nil {
 		err = fmt.Errorf("request building failure: %w", err)
 		return
 	}
-	req.Body = io.NopCloser(&payload)
-	req.ContentLength = int64(payload.Len())
+	req.ContentLength = int64(payload.Len()) // should not normally be needed with a *bytes.Buffer but if it is not set, go will switch to chunked content encoding and qbt webserver does not support it
 	req.Header.Set(contentTypeHeader, contentType)
 	// execute request
 	var output string
