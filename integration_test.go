@@ -21,7 +21,7 @@ func newTestClient(t *testing.T) *Client {
 		t.Fatalf("parsing QBT_ADDR: %v", err)
 	}
 
-	c, err := New(u, user, pass, nil)
+	c, err := New(u, user, pass)
 	if err != nil {
 		t.Fatalf("creating client: %v", err)
 	}

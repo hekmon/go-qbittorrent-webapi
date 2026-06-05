@@ -32,7 +32,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	client, err := qbtapi.New(endpoint, "admin", "password", nil)
+	client, err := qbtapi.New(endpoint, "admin", "password")
 	if err != nil {
 		panic(err)
 	}

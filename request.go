@@ -78,7 +78,9 @@ func (c *Client) requestBuild(ctx context.Context, method, APIName, APIMethodNam
 		err = fmt.Errorf("creating HTTP request failed: %w", err)
 		return
 	}
-	request.Header.Set(userAgentHeader, userAgentValue)
+	if c.userAgent != "" {
+		request.Header.Set(userAgentHeader, c.userAgent)
+	}
 	if body != nil && !bodyWasProvided {
 		// body was generated from parameters, adapt headers
 		request.ContentLength = int64(len(encodedParameters))
