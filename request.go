@@ -137,7 +137,7 @@ func (c *Client) requestExtract(response *http.Response, output any) (err error)
 		// caller does not care about body
 		return
 	}
-	if reflect.TypeOf(output).Kind() != reflect.Ptr {
+	if reflect.TypeOf(output).Kind() != reflect.Pointer {
 		return InternalError(fmt.Sprintf("output must be a pointer (currently: %v)",
 			reflect.TypeOf(output)))
 	}
