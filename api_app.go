@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -398,6 +399,52 @@ func (pt ProxyType) String() string {
 
 func (pt ProxyType) Ptr() *ProxyType {
 	return &pt
+}
+
+// UnmarshalJSON handles both integer (legacy API) and string (v5+) representations.
+func (pt *ProxyType) UnmarshalJSON(data []byte) error {
+	// Try integer first for backward compatibility with older API versions.
+	var i int8
+	if err := json.Unmarshal(data, &i); err == nil {
+		*pt = ProxyType(i)
+		return nil
+	}
+	// Fall back to string (qBittorrent v5+ sends enum names as strings).
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+	switch strings.ToLower(s) {
+	case "none":
+		*pt = ProxyDisabled
+	case "socks4":
+		*pt = ProxySOCKS4NoAuth
+	case "socks5":
+		*pt = ProxySOCKS5NoAuth
+	case "http":
+		*pt = ProxyHTTPNoAuth
+	default:
+		return fmt.Errorf("unknown proxy_type value: %q", s)
+	}
+	return nil
+}
+
+// MarshalJSON encodes as string for forward compatibility with qBittorrent v5+.
+// Auth variants map to the base type string because authentication is controlled
+// by the separate ProxyAuthEnabled field.
+func (pt ProxyType) MarshalJSON() ([]byte, error) {
+	switch pt {
+	case ProxyDisabled:
+		return json.Marshal("None")
+	case ProxySOCKS4NoAuth:
+		return json.Marshal("SOCKS4")
+	case ProxySOCKS5NoAuth, ProxySOCKS5Auth:
+		return json.Marshal("SOCKS5")
+	case ProxyHTTPNoAuth, ProxyHTTPAuth:
+		return json.Marshal("HTTP")
+	default:
+		return json.Marshal(int8(pt))
+	}
 }
 
 type DynDNSService uint8
