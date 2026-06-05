@@ -4,7 +4,7 @@
 
 Golang bindings for [qBittorrent v5 Web API](https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)).
 
-> **A note on how this library was built**: the core architecture and low-level HTTP plumbing (`client.go`, `request.go`) were hand-crafted around a small set of initial endpoints to establish patterns for error handling, custom JSON marshaling, and data modeling. Once those patterns were validated, the [`AGENTS.md`](AGENTS.md) file was written to codify them. All remaining endpoints were then implemented by coding agents following `AGENTS.md` to keep the codebase consistent.
+> **A note on how this library was built**: development happened in three phases. First, the core architecture and low-level HTTP plumbing (`client.go`, `request.go`) were hand-crafted around a small set of initial endpoints to establish patterns for error handling, custom JSON marshaling, and data modeling. Second, **HITL** (human in the loop) introduced agentic engineering: the validated patterns were codified into [`AGENTS.md`](AGENTS.md), and the first agent-driven endpoints were implemented under close supervision to ensure the rules worked in practice. Third, **HOTL** (human on the loop) took over as agents filled in the remaining endpoints autonomously, with human validation and adjustments to `AGENTS.md` when edge cases surfaced.
 
 ## Installation
 
