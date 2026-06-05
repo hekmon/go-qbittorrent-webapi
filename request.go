@@ -14,15 +14,15 @@ import (
 )
 
 const (
-	apiPrefix                     = "api/v2"
-	originHeader                  = "Origin"
-	userAgentHeader               = "User-Agent"
-	userAgentValue                = "github.com/hekmon/go-qbittorrent-webapi"
-	contentTypeHeader             = "Content-Type"
-	contentTypeHeaderFormURL      = "application/x-www-form-urlencoded"
-	contentTypeHeaderTextPlain    = "text/plain"
-	contentTypeHeaderTextPlanUTF8 = "text/plain; charset=UTF-8"
-	contentTypeHeaderJSON         = "application/json"
+	apiPrefix                      = "api/v2"
+	originHeader                   = "Origin"
+	userAgentHeader                = "User-Agent"
+	userAgentValue                 = "github.com/hekmon/go-qbittorrent-webapi"
+	contentTypeHeader              = "Content-Type"
+	contentTypeHeaderFormURL       = "application/x-www-form-urlencoded"
+	contentTypeHeaderTextPlain     = "text/plain"
+	contentTypeHeaderTextPlainUTF8 = "text/plain; charset=UTF-8"
+	contentTypeHeaderJSON          = "application/json"
 )
 
 func (c *Client) requestBuild(ctx context.Context, method, APIName, APIMethodName string, parameters map[string]string, body io.Reader) (request *http.Request, err error) {
@@ -32,6 +32,7 @@ func (c *Client) requestBuild(ctx context.Context, method, APIName, APIMethodNam
 	// prepare query parameters
 	var (
 		encodedParameters string
+		bodyWasProvided   = body != nil
 	)
 	if parameters != nil {
 		// some endpoint requires non standard encoding
@@ -71,14 +72,13 @@ func (c *Client) requestBuild(ctx context.Context, method, APIName, APIMethodNam
 			return
 		}
 	}
-	fmt.Println(APIName, APIMethodName, reflect.TypeOf(body))
 	// build http request
 	if request, err = http.NewRequestWithContext(ctx, method, requestURL.String(), body); err != nil {
 		return
 	}
 	request.Header.Set(userAgentHeader, userAgentValue)
-	if body != nil {
-		// if parameters has been set as body, adapt headers
+	if body != nil && !bodyWasProvided {
+		// body was generated from parameters, adapt headers
 		request.ContentLength = int64(len(encodedParameters))
 		request.Header.Set(contentTypeHeader, contentTypeHeaderFormURL)
 	}
@@ -135,7 +135,7 @@ func (c *Client) requestExtract(response *http.Response, output any) (err error)
 	// Given the response body content type
 	switch response.Header.Get(contentTypeHeader) {
 	// text-plain
-	case contentTypeHeaderTextPlain, contentTypeHeaderTextPlanUTF8:
+	case contentTypeHeaderTextPlain, contentTypeHeaderTextPlainUTF8:
 		// output must be a string pointer
 		if reflect.Indirect(reflect.ValueOf(output)).Kind() != reflect.String {
 			return InternalError(fmt.Sprintf("output should be a string pointer when %s is '%s' (currently: %v)",

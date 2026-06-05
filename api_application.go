@@ -160,7 +160,7 @@ type ApplicationPreferences struct {
 	SlowTorrentUlRateThreshold         *int                    `json:"slow_torrent_ul_rate_threshold,omitempty"`         // Upload rate in KiB/s for a torrent to be considered "slow"
 	SlowTorrentInactiveTimer           *int                    `json:"slow_torrent_inactive_timer,omitempty"`            // Seconds a torrent should be inactive before considered "slow"
 	MaxRatioEnabled                    *bool                   `json:"max_ratio_enabled,omitempty"`                      // True if share ratio limit is enabled
-	MaxRatio                           *int                    `json:"max_ratio,omitempty"`                              // Get the global share ratio limit
+	MaxRatio                           *float64                `json:"max_ratio,omitempty"`                              // Get the global share ratio limit
 	MaxRatioAct                        *MaxRatioAct            `json:"max_ratio_act,omitempty"`                          // Action performed when a torrent reaches the maximum share ratio.
 	ListenPort                         *int                    `json:"listen_port,omitempty"`                            // Port for incoming connections
 	UPnP                               *bool                   `json:"upnp,omitempty"`                                   // True if UPnP/NAT-PMP is enabled
