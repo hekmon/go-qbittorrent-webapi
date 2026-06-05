@@ -4,8 +4,6 @@
 
 Golang bindings for [qBittorrent v5 Web API](https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)).
 
-> **A note on how this library was built**: development happened in three phases. First, the core architecture and low-level HTTP plumbing (`client.go`, `request.go`) were hand-crafted around a small set of initial endpoints to establish patterns for error handling, custom JSON marshaling, and data modeling. Second, **HITL** (human in the loop) introduced agentic engineering: the validated patterns were codified into [`AGENTS.md`](AGENTS.md), and the first agent-driven endpoints were implemented under close supervision to ensure the rules worked in practice. Third, **HOTL** (human on the loop) took over as agents filled in the remaining endpoints autonomously, with human validation and adjustments to `AGENTS.md` when edge cases surfaced.
-
 ## Installation
 
 ```bash
@@ -36,12 +34,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	// Login (manual login is not needed as client will automatically try to login if not logged)
-	if err = client.Login(context.TODO()); err != nil {
-		panic(err)
-	}
 	defer func() {
-        // But it is recommended that you logout once done to clear session on server side
+		// Logout when done to clear the session on the server side
 		if err = client.Logout(context.TODO()); err != nil {
 			panic(err)
 		}
@@ -64,7 +58,7 @@ func main() {
 	}
 	fmt.Printf("qBittorrent build info: %+v\n", buildInfos)
 
-    // App prefs
+	// App prefs
 	appPrefs, err := client.GetApplicationPreferences(context.TODO())
 	if err != nil {
 		panic(err)
@@ -97,7 +91,7 @@ func main() {
 		fmt.Printf("\t * %+v\n", torrent)
 	}
 
-    // Add torrents
+	// Add torrents
 	files, err := qbtapi.ReadTorrentsFiles([]string{"/mnt/d/Downloads/ubuntu-25.04-desktop-amd64.iso.torrent"})
 	if err != nil {
 		panic(err)
@@ -114,9 +108,9 @@ func main() {
 	}
 	fmt.Println("torrents added")
 	time.Sleep(3 * time.Second)
-	
+
 	// List all torrents for deletion
-	torrents, err := client.GetTorrentList(context.TODO(), nil)
+	torrents, err = client.GetTorrentList(context.TODO(), nil)
 	if err != nil {
 		panic(err)
 	}
@@ -132,6 +126,37 @@ func main() {
 	// etc...
 }
 ```
+
+## Optional fields
+
+Many API structs use pointers for optional fields. Use the provided helpers to create them:
+
+```go
+prefs := qbtapi.ApplicationPreferences{
+    SavePath:        qbtapi.String("/downloads"),
+    MaxActiveUploads: qbtapi.Int(3),
+    QueueingEnabled: qbtapi.Bool(true),
+}
+```
+
+## Client options
+
+You can customize the underlying HTTP client or the User-Agent:
+
+```go
+customHTTP := &http.Client{Timeout: 30 * time.Second}
+client, err := qbtapi.New(endpoint, "admin", "password",
+    qbtapi.WithHTTPClient(customHTTP),
+    qbtapi.WithUserAgent("my-app/1.0"),
+)
+```
+
+## Error handling
+
+The library returns wrapped errors. You can type-assert on two specific error types:
+
+- `qbtapi.HTTPError(int)` — unexpected HTTP status code (e.g., `403 Forbidden`, `404 Not Found`).
+- `qbtapi.InternalError(string)` — states that should never happen (unsupported content type, invalid output pointer kind, etc.).
 
 ## Endpoints implementation
 
@@ -224,7 +249,7 @@ All documented endpoints of the qBittorrent v5 Web API are implemented.
 - [x] Rename file
 - [x] Rename folder
 
-### RSS (experimental)
+### RSS (experimental, untested)
 
 - [x] Add folder
 - [x] Add feed
@@ -251,3 +276,11 @@ All documented endpoints of the qBittorrent v5 Web API are implemented.
 - [x] Uninstall search plugin
 - [x] Enable search plugin
 - [x] Update search plugins
+
+---
+
+## A note on how this library was built
+
+- **Hand-crafted foundation.** The core architecture and low-level HTTP plumbing (`client.go`, `request.go`) were written manually around a small set of initial endpoints to establish patterns for error handling, custom JSON marshaling, and data modeling.
+- **HITL — Human In The Loop.** Validated patterns were codified into [`AGENTS.md`](AGENTS.md). Agentic engineering was introduced under close supervision: the first agent-driven endpoints were implemented to ensure the rules worked in practice.
+- **HOTL — Human On The Loop.** Agents filled in the remaining endpoints autonomously, with human validation and adjustments to `AGENTS.md` when edge cases surfaced.
