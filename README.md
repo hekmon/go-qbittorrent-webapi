@@ -156,13 +156,13 @@ If you need more, feel free to open an issue or a PR.
 
 ### Log
 
-- [ ] Get log
-- [ ] Get peer log
+- [x] Get log
+- [x] Get peer log
 
 ### Sync
 
-- [ ] Get main data
-- [ ] Get torrent peers data
+- [x] Get main data
+- [x] Get torrent peers data
 
 ### Transfer info
 
