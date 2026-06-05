@@ -25,8 +25,9 @@ import (
 */
 
 const (
-	torrentsAPIName  = "torrents"
-	tagListSeparator = ","
+	torrentsAPIName   = "torrents"
+	tagListSeparator  = ","
+	hashListSeparator = "|"
 )
 
 /*
@@ -70,7 +71,7 @@ func (lf ListFilters) getLowLevelRepr() (filters map[string]string) {
 		filters["offset"] = strconv.Itoa(*lf.Offset)
 	}
 	if lf.Hashes != nil {
-		filters["hashes"] = strings.Join(lf.Hashes, "|")
+		filters["hashes"] = strings.Join(lf.Hashes, hashListSeparator)
 	}
 	return
 }
@@ -244,7 +245,7 @@ func (ti *TorrentInfos) UnmarshalJSON(data []byte) (err error) {
 func (ti *TorrentInfos) MarshalJSON() ([]byte, error) {
 	type mask TorrentInfos
 	tmp := struct {
-		*mask
+		mask
 		// Custom marshaling
 		AddedOn            int64  `json:"added_on"`           // Time (Unix Epoch) when the torrent was added to the client
 		AmountLeft         int    `json:"amount_left"`        // Amount of data left to download (bytes)
@@ -271,7 +272,7 @@ func (ti *TorrentInfos) MarshalJSON() ([]byte, error) {
 		UploadedSession    int    `json:"uploaded_session"`   // Amount of data uploaded this session
 		UploadSpeed        int    `json:"upspeed"`            // Torrent upload speed (bytes/s)
 	}{
-		mask: (*mask)(ti),
+		mask: mask(*ti),
 	}
 	// Adapt to JSON types
 	tmp.AddedOn = ti.AddedOn.Unix()
@@ -447,7 +448,7 @@ func (tgp *TorrentGenericProperties) UnmarshalJSON(data []byte) (err error) {
 func (tgp *TorrentGenericProperties) MarshalJSON() ([]byte, error) {
 	type mask TorrentGenericProperties
 	tmp := struct {
-		*mask
+		mask
 		// Custom marshaling
 		CreationDate           int64 `json:"creation_date"`            // Torrent creation date (Unix timestamp)
 		PieceSize              int   `json:"piece_size"`               // Torrent piece size (bytes)
@@ -471,7 +472,7 @@ func (tgp *TorrentGenericProperties) MarshalJSON() ([]byte, error) {
 		UploadSpeedAvg         int   `json:"up_speed_avg"`             // Torrent average upload speed (bytes/second)
 		UploadSpeed            int   `json:"up_speed"`                 // Torrent upload speed (bytes/second)
 	}{
-		mask:                   (*mask)(tgp),
+		mask:                   mask(*tgp),
 		CreationDate:           tgp.CreationDate.Unix(),
 		PieceSize:              int(tgp.PieceSize.Bytes()),
 		TotalWasted:            int(tgp.TotalWasted.Bytes()),
@@ -569,11 +570,11 @@ func (tt *TorrentTracker) MarshalJSON() ([]byte, error) {
 type TorrentTrackerStatus uint8
 
 const (
-	TorrentTrackerDisabled     TorrentTrackerStatus = iota // Tracker is disabled (used for DHT, PeX, and LSD)
-	TorrentTrackerNotContacted                             // Tracker has not been contacted yet
-	TorrentTrackerWorking                                  // Tracker has been contacted and is working
-	TorrentTrackerUpdating                                 // Tracker is updating
-	TorrentTrackerNotWorking                               // Tracker has been contacted, but it is not working (or doesn't send proper replies)
+	TorrentTrackerDisabled     TorrentTrackerStatus = 0 // Tracker is disabled (used for DHT, PeX, and LSD)
+	TorrentTrackerNotContacted TorrentTrackerStatus = 1 // Tracker has not been contacted yet
+	TorrentTrackerWorking      TorrentTrackerStatus = 2 // Tracker has been contacted and is working
+	TorrentTrackerUpdating     TorrentTrackerStatus = 3 // Tracker is updating
+	TorrentTrackerNotWorking   TorrentTrackerStatus = 4 // Tracker has been contacted, but it is not working (or doesn't send proper replies)
 )
 
 func (tts TorrentTrackerStatus) String() string {
@@ -602,7 +603,7 @@ func (tts TorrentTrackerStatus) String() string {
 func (c *Client) DeleteTorrents(ctx context.Context, hashes []string, deleteFiles bool) (err error) {
 	// build request
 	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "delete", map[string]string{
-		"hashes":      strings.Join(hashes, "|"),
+		"hashes":      strings.Join(hashes, hashListSeparator),
 		"deleteFiles": strconv.FormatBool(deleteFiles),
 	}, nil)
 	if err != nil {
@@ -681,7 +682,7 @@ func (c *Client) AddNewTorrents(ctx context.Context, files map[string][]byte, ur
 		err = fmt.Errorf("executing request failed: %w", err)
 		return
 	}
-	if output != "Ok." {
+	if output != expectedSuccessResponse {
 		err = fmt.Errorf("unexpected server response: %s", output)
 		return
 	}

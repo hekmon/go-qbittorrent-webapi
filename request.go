@@ -23,6 +23,7 @@ const (
 	contentTypeHeaderTextPlain     = "text/plain"
 	contentTypeHeaderTextPlainUTF8 = "text/plain; charset=UTF-8"
 	contentTypeHeaderJSON          = "application/json"
+	expectedSuccessResponse        = "Ok."
 )
 
 func (c *Client) requestBuild(ctx context.Context, method, APIName, APIMethodName string, parameters map[string]string, body io.Reader) (request *http.Request, err error) {

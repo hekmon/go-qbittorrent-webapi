@@ -36,11 +36,11 @@ func (c *Client) Login(ctx context.Context) (err error) {
 	req.Header.Set(originHeader, origin)
 	// execute auth request
 	var output string
-	if err = c.requestExecute(req, &output, true); err != nil {
+	if err = c.requestExecute(req, &output, false); err != nil {
 		err = fmt.Errorf("executing request failed: %w", err)
 		return
 	}
-	if output != "Ok." {
+	if output != expectedSuccessResponse {
 		err = fmt.Errorf("unexpected server response: %s", output)
 		return
 	}

@@ -296,16 +296,16 @@ func (ap ApplicationPreferences) GoString() string {
 type SchedulerDays uint8
 
 const (
-	SchedulerDaysEveryDay SchedulerDays = iota
-	SchedulerDaysEveryWeekday
-	SchedulerDaysEveryWeekend
-	SchedulerDaysEveryMonday
-	SchedulerDaysEveryTuesday
-	SchedulerDaysEveryWednesday
-	SchedulerDaysEveryThursday
-	SchedulerDaysEveryFriday
-	SchedulerDaysEverySaturday
-	SchedulerDaysEverySunday
+	SchedulerDaysEveryDay       SchedulerDays = 0 // Every day
+	SchedulerDaysEveryWeekday   SchedulerDays = 1 // Every weekday
+	SchedulerDaysEveryWeekend   SchedulerDays = 2 // Every weekend
+	SchedulerDaysEveryMonday    SchedulerDays = 3 // Every Monday
+	SchedulerDaysEveryTuesday   SchedulerDays = 4 // Every Tuesday
+	SchedulerDaysEveryWednesday SchedulerDays = 5 // Every Wednesday
+	SchedulerDaysEveryThursday  SchedulerDays = 6 // Every Thursday
+	SchedulerDaysEveryFriday    SchedulerDays = 7 // Every Friday
+	SchedulerDaysEverySaturday  SchedulerDays = 8 // Every Saturday
+	SchedulerDaysEverySunday    SchedulerDays = 9 // Every Sunday
 )
 
 func (sd SchedulerDays) String() string {
@@ -335,13 +335,17 @@ func (sd SchedulerDays) String() string {
 	}
 }
 
+func (sd SchedulerDays) Ptr() *SchedulerDays {
+	return &sd
+}
+
 // EncryptionMode represents the encryption mode
 type EncryptionMode uint8
 
 const (
-	EncryptionPrefered EncryptionMode = iota // Allow to use both encrypted and unencrypted connections
-	EncryptionForceOn                        // By forcing encryption on you won't be able to use unencrypted connections
-	EncryptionForceOff                       // By forcing encryption off you won't be able to use encrypted connections
+	EncryptionPrefered EncryptionMode = 0 // Allow to use both encrypted and unencrypted connections
+	EncryptionForceOn  EncryptionMode = 1 // By forcing encryption on you won't be able to use unencrypted connections
+	EncryptionForceOff EncryptionMode = 2 // By forcing encryption off you won't be able to use encrypted connections
 )
 
 func (em EncryptionMode) String() string {
@@ -357,16 +361,20 @@ func (em EncryptionMode) String() string {
 	}
 }
 
+func (em EncryptionMode) Ptr() *EncryptionMode {
+	return &em
+}
+
 // ProxyType represents the proxy type
 type ProxyType int8
 
 const (
-	ProxyDisabled   ProxyType = iota - 1
-	ProxyHTTPNoAuth ProxyType = iota
-	ProxySOCKS5NoAuth
-	ProxyHTTPAuth
-	ProxySOCKS5Auth
-	ProxySOCKS4NoAuth
+	ProxyDisabled     ProxyType = -1 // Proxy is disabled
+	ProxyHTTPNoAuth   ProxyType = 1  // HTTP proxy without authentication
+	ProxySOCKS5NoAuth ProxyType = 2  // SOCKS5 proxy without authentication
+	ProxyHTTPAuth     ProxyType = 3  // HTTP proxy with authentication
+	ProxySOCKS5Auth   ProxyType = 4  // SOCKS5 proxy with authentication
+	ProxySOCKS4NoAuth ProxyType = 5  // SOCKS4 proxy without authentication
 )
 
 func (pt ProxyType) String() string {
@@ -388,11 +396,15 @@ func (pt ProxyType) String() string {
 	}
 }
 
+func (pt ProxyType) Ptr() *ProxyType {
+	return &pt
+}
+
 type DynDNSService uint8
 
 const (
-	DynDNS DynDNSService = iota
-	NoIP
+	DynDNS DynDNSService = 0 // Use DynDNS
+	NoIP   DynDNSService = 1 // Use NOIP
 )
 
 func (d DynDNSService) String() string {
@@ -406,11 +418,15 @@ func (d DynDNSService) String() string {
 	}
 }
 
+func (d DynDNSService) Ptr() *DynDNSService {
+	return &d
+}
+
 type MaxRatioAct uint8
 
 const (
-	MaxRatioActPauseTorrent MaxRatioAct = iota
-	MaxRatioActRemoveTorrent
+	MaxRatioActPauseTorrent  MaxRatioAct = 0 // Pause torrent
+	MaxRatioActRemoveTorrent MaxRatioAct = 1 // Remove torrent
 )
 
 func (m MaxRatioAct) String() string {
@@ -424,12 +440,16 @@ func (m MaxRatioAct) String() string {
 	}
 }
 
+func (m MaxRatioAct) Ptr() *MaxRatioAct {
+	return &m
+}
+
 type BittorrentProtocol uint8
 
 const (
-	BittorrentProtocolTCPAndUTP BittorrentProtocol = iota
-	BittorrentProtocolTCP
-	BittorrentProtocolUTP
+	BittorrentProtocolTCPAndUTP BittorrentProtocol = 0 // TCP and μTP
+	BittorrentProtocolTCP       BittorrentProtocol = 1 // TCP
+	BittorrentProtocolUTP       BittorrentProtocol = 2 // μTP
 )
 
 func (b BittorrentProtocol) String() string {
@@ -445,12 +465,16 @@ func (b BittorrentProtocol) String() string {
 	}
 }
 
+func (b BittorrentProtocol) Ptr() *BittorrentProtocol {
+	return &b
+}
+
 type UploadChokingAlgorithm uint8
 
 const (
-	UploadChokingAlgorithmRoundRobin UploadChokingAlgorithm = iota
-	UploadChokingAlgorithmFastestUpload
-	UploadChokingAlgorithmAntiLeech
+	UploadChokingAlgorithmRoundRobin    UploadChokingAlgorithm = 0 // Round-robin
+	UploadChokingAlgorithmFastestUpload UploadChokingAlgorithm = 1 // Fastest upload
+	UploadChokingAlgorithmAntiLeech     UploadChokingAlgorithm = 2 // Anti-leech
 )
 
 func (u UploadChokingAlgorithm) String() string {
@@ -466,11 +490,15 @@ func (u UploadChokingAlgorithm) String() string {
 	}
 }
 
+func (u UploadChokingAlgorithm) Ptr() *UploadChokingAlgorithm {
+	return &u
+}
+
 type UploadSlotsBehavior uint8
 
 const (
-	UploadSlotsBehaviorFixedSlots UploadSlotsBehavior = iota
-	UploadSlotsBehaviorUploadRateBased
+	UploadSlotsBehaviorFixedSlots      UploadSlotsBehavior = 0 // Fixed slots
+	UploadSlotsBehaviorUploadRateBased UploadSlotsBehavior = 1 // Upload rate based
 )
 
 func (u UploadSlotsBehavior) String() string {
@@ -484,11 +512,15 @@ func (u UploadSlotsBehavior) String() string {
 	}
 }
 
+func (u UploadSlotsBehavior) Ptr() *UploadSlotsBehavior {
+	return &u
+}
+
 type UTPTCPMixedMode uint8
 
 const (
-	UTPTCPMixedModePreferTCP UTPTCPMixedMode = iota
-	UTPTCPMixedModePeerProportional
+	UTPTCPMixedModePreferTCP        UTPTCPMixedMode = 0 // Prefer TCP
+	UTPTCPMixedModePeerProportional UTPTCPMixedMode = 1 // Peer proportional
 )
 
 func (u UTPTCPMixedMode) String() string {
@@ -500,6 +532,10 @@ func (u UTPTCPMixedMode) String() string {
 	default:
 		return "Unknown"
 	}
+}
+
+func (u UTPTCPMixedMode) Ptr() *UTPTCPMixedMode {
+	return &u
 }
 
 // GetDefaultSavePath retrieves the default save path.
