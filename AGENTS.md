@@ -162,6 +162,17 @@ func (fs FilterState) Ptr() *FilterState {
 }
 ```
 
+#### When the server behaves differently from the documented API
+
+The official qBittorrent wiki documents the API for a specific version. Newer qBittorrent releases may change field serializations without updating the wiki. For example, `proxy_type` is documented as an integer, yet qBittorrent v5.0+ sends and accepts a **string** (`"None"`, `"SOCKS4"`, etc.).
+
+When a numeric enum field changes its wire format to a string in a newer server version, add custom `UnmarshalJSON` / `MarshalJSON` methods that accept **both** representations. This preserves backward compatibility with older servers while fixing unmarshaling against newer ones. See `ProxyType` in `api_app.go` for the reference implementation:
+
+- `UnmarshalJSON` tries the original `int` first; if that fails, falls back to `string`.
+- `MarshalJSON` writes the new `string` format for forward compatibility.
+
+Only apply this pattern when a test or user report proves the discrepancy — do not add it speculatively to other enums.
+
 ### Undocumented Fields
 
 If a field exists in the API response but is absent from the official qBittorrent wiki, mark it with a `// undocumented` comment on the line immediately above the field:
