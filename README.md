@@ -4,6 +4,8 @@
 
 Golang bindings for [qBittorrent v5 Web API](https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)).
 
+> **A note on how this library was built**: the core architecture and low-level HTTP plumbing (`client.go`, `request.go`) were hand-crafted around a small set of initial endpoints to establish patterns for error handling, custom JSON marshaling, and data modeling. Once those patterns were validated, the [`AGENTS.md`](AGENTS.md) file was written to codify them. All remaining endpoints were then implemented by coding agents following `AGENTS.md` to keep the codebase consistent.
+
 ## Installation
 
 ```bash
@@ -133,9 +135,7 @@ func main() {
 
 ## Endpoints implementation
 
-Not all endpoints are implemented, only the ones I needed for my own usage.
-But global software architecture is ready and adding more endpoints should be easy.
-If you need more, feel free to open an issue or a PR.
+All documented endpoints of the qBittorrent v5 Web API are implemented.
 
 ### Authentication
 
