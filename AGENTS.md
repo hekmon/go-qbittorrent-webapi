@@ -390,6 +390,8 @@ func (t MyStruct) MarshalJSON() ([]byte, error) {
 
 ## Implementing a New Endpoint
 
+The official API specification lives at: https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)
+
 Follow this exact flow when adding a public API method:
 
 1. **Add the domain header and constant** if the domain file is new.
