@@ -114,9 +114,11 @@ func (c *Client) requestExecute(request *http.Request, output any, autoAuth bool
 			return
 		}
 		// reset payload reader & reissue request now that we are authenticated
-		if request.Body, err = request.GetBody(); err != nil {
-			err = fmt.Errorf("resetting request body after auto-login failed: %w", err)
-			return
+		if request.GetBody != nil {
+			if request.Body, err = request.GetBody(); err != nil {
+				err = fmt.Errorf("resetting request body after auto-login failed: %w", err)
+				return
+			}
 		}
 		return c.requestExecute(request, output, false)
 	default:
