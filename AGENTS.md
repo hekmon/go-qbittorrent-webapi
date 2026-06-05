@@ -186,6 +186,8 @@ This signals that the field was discovered empirically and may not be stable.
 
 **Development workflow**: when adding a new endpoint, unmarshal the response into a `map[string]any` first to inspect the actual payload. Use `reflect.TypeOf()` on each value to determine its JSON type. Compare every key against the wiki documentation. Any key present in the response but missing from the wiki becomes an `// undocumented` field in the final struct.
 
+**Probing with `json.RawMessage`**: it is acceptable to decode an endpoint into `json.RawMessage` during active development to capture the raw payload and inspect its shape. This is a temporary measure only — before the code is finalized, the `json.RawMessage` indirection must be replaced with the definitive struct or map type. `json.RawMessage` must never remain in committed code.
+
 ### Large Flat Structs
 
 Very large flat preference structs (e.g. `ApplicationPreferences`) may implement `String()` and `GoString()` for human-readable output. Raw struct formatting is useless for 100+ fields, so round-tripping through JSON to `map[string]any` is acceptable:
@@ -475,6 +477,8 @@ Follow this exact flow when adding a public API method:
   - `text/plain` → `*string`
   - `application/json` → struct pointer, slice pointer, or `*string` (some endpoints return a JSON-encoded string such as `"Ok."`)
   - Unsupported content types produce an `InternalError`.
+
+  **Text/plain numeric or boolean responses**: some endpoints return `text/plain` with structured data (e.g. `"102400"` for a byte limit, `"1"`/`"0"` for a boolean state). Decode into `*string` via `requestExecute`, then parse with `strconv.Atoi` or string comparison. See `GetGlobalDownloadLimit` and `GetAlternativeSpeedLimitsState` in `api_transfer.go` for reference.
 
 **Do not** modify the core retry or auto-auth logic without a strong reason. If you add an endpoint that behaves differently (e.g. file upload), handle the special body/header logic locally in the domain file (see `AddNewTorrents` as an example).
 

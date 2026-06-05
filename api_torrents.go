@@ -1192,13 +1192,8 @@ func (c *Client) GetTorrentDownloadLimit(ctx context.Context, hashes []string) (
 		err = fmt.Errorf("building request failed: %w", err)
 		return
 	}
-	var raw json.RawMessage
-	if err = c.requestExecute(req, &raw, true); err != nil {
+	if err = c.requestExecute(req, &limits, true); err != nil {
 		err = fmt.Errorf("executing request failed: %w", err)
-		return
-	}
-	if err = json.Unmarshal(raw, &limits); err != nil {
-		err = fmt.Errorf("decoding limits failed: %w", err)
 	}
 	return
 }
@@ -1207,6 +1202,7 @@ func (c *Client) GetTorrentDownloadLimit(ctx context.Context, hashes []string) (
 	set torrent download limit
 */
 
+// GetTorrentDownloadLimit
 // SetTorrentDownloadLimit sets the download limit for the given torrents.
 // https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#set-torrent-download-limit
 func (c *Client) SetTorrentDownloadLimit(ctx context.Context, hashes []string, limit Speed) (err error) {
@@ -1238,13 +1234,8 @@ func (c *Client) GetTorrentUploadLimit(ctx context.Context, hashes []string) (li
 		err = fmt.Errorf("building request failed: %w", err)
 		return
 	}
-	var raw json.RawMessage
-	if err = c.requestExecute(req, &raw, true); err != nil {
+	if err = c.requestExecute(req, &limits, true); err != nil {
 		err = fmt.Errorf("executing request failed: %w", err)
-		return
-	}
-	if err = json.Unmarshal(raw, &limits); err != nil {
-		err = fmt.Errorf("decoding limits failed: %w", err)
 	}
 	return
 }
@@ -1353,13 +1344,8 @@ func (c *Client) GetAllCategories(ctx context.Context) (categories map[string]Ca
 		err = fmt.Errorf("building request failed: %w", err)
 		return
 	}
-	var raw json.RawMessage
-	if err = c.requestExecute(req, &raw, true); err != nil {
+	if err = c.requestExecute(req, &categories, true); err != nil {
 		err = fmt.Errorf("executing request failed: %w", err)
-		return
-	}
-	if err = json.Unmarshal(raw, &categories); err != nil {
-		err = fmt.Errorf("decoding categories failed: %w", err)
 	}
 	return
 }

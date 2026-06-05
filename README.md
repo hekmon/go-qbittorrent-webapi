@@ -226,28 +226,28 @@ If you need more, feel free to open an issue or a PR.
 
 ### RSS (experimental)
 
-- [ ] Add folder
-- [ ] Add feed
-- [ ] Remove item
-- [ ] Move item
-- [ ] Get all items
-- [ ] Mark as read
-- [ ] Refresh item
-- [ ] Set auto-downloading rule
-- [ ] Rename auto-downloading rule
-- [ ] Remove auto-downloading rule
-- [ ] Get all auto-downloading rules
-- [ ] Get all articles matching a rule
+- [x] Add folder
+- [x] Add feed
+- [x] Remove item
+- [x] Move item
+- [x] Get all items
+- [x] Mark as read
+- [x] Refresh item
+- [x] Set auto-downloading rule
+- [x] Rename auto-downloading rule
+- [x] Remove auto-downloading rule
+- [x] Get all auto-downloading rules
+- [x] Get all articles matching a rule
 
 ### Search
 
-- [ ] Start search
-- [ ] Stop search
-- [ ] Get search status
-- [ ] Get search results
-- [ ] Delete search
-- [ ] Get search plugins
-- [ ] Install search plugin
-- [ ] Uninstall search plugin
-- [ ] Enable search plugin
-- [ ] Update search plugins
+- [x] Start search
+- [x] Stop search
+- [x] Get search status
+- [x] Get search results
+- [x] Delete search
+- [x] Get search plugins
+- [x] Install search plugin
+- [x] Uninstall search plugin
+- [x] Enable search plugin
+- [x] Update search plugins
