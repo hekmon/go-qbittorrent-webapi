@@ -157,12 +157,12 @@ func (c *Client) requestExtract(response *http.Response, output any) (err error)
 		*output.(*string) = string(bodyData)
 	// application/json
 	case contentTypeHeaderJSON:
-		// output must be a struct or a slice pointer
+		// output must be a struct, slice, or string pointer
 		switch reflect.Indirect(reflect.ValueOf(output)).Kind() {
-		case reflect.Struct, reflect.Slice:
+		case reflect.Struct, reflect.Slice, reflect.String:
 			// ok
 		default:
-			return InternalError(fmt.Sprintf("when %s is '%s' output should be a struct pointer or a slice pointer (currently: %v)",
+			return InternalError(fmt.Sprintf("when %s is '%s' output should be a struct, slice, or string pointer (currently: %v)",
 				contentTypeHeader, contentTypeHeaderJSON, reflect.TypeOf(output)))
 		}
 		// decode as JSON

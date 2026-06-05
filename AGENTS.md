@@ -452,9 +452,14 @@ Follow this exact flow when adding a public API method:
   - When `parameters` are encoded as a POST body (i.e. method is `POST` and no explicit `body` was provided), `requestBuild` automatically sets `Content-Type: application/x-www-form-urlencoded` and `Content-Length` on the returned request.
   - For multipart uploads (e.g. file upload), build the payload locally into a `bytes.Buffer`, obtain the `Content-Type` from the multipart writer, pass the buffer as `body` to `requestBuild` with `nil` parameters, then manually set `req.Header.Set(contentTypeHeader, contentType)` before calling `requestExecute`.
 - `requestExecute(req, output, autoAuth)` — executes the request. `output` can be `nil` when the caller does not need to read the response body. If `autoAuth` is `true` and a `403` is received, it closes the response body, calls `Login`, resets the request body via `request.GetBody()`, and retries once with `autoAuth = false`. Use `autoAuth = true` for all endpoints except auth-lifecycle methods (e.g. `Logout`) that must not trigger a recursive login.
-- `requestExtract(response, output)` — unmarshals the body based on `Content-Type` (`text/plain` → `*string`, `application/json` → struct/slice pointer).
+- `requestExtract(response, output)` — unmarshals the body based on `Content-Type`:
+  - `text/plain` → `*string`
+  - `application/json` → struct pointer, slice pointer, or `*string` (some endpoints return a JSON-encoded string such as `"Ok."`)
+  - Unsupported content types produce an `InternalError`.
 
 **Do not** modify the core retry or auto-auth logic without a strong reason. If you add an endpoint that behaves differently (e.g. file upload), handle the special body/header logic locally in the domain file (see `AddNewTorrents` as an example).
+
+Some endpoints historically returned `text/plain` (e.g. `"Ok."`) but newer qBittorrent versions may return `application/json` instead. For write operations where the response body carries no meaningful data, pass `nil` for `output` and rely on the HTTP status code. This is the pattern used by `AddNewTorrents`.
 
 The `Login` endpoint is another example: it manually constructs and sets an `Origin` header to satisfy qBittorrent's CSRF protection. This is done in `api_auth.go` after calling `requestBuild`.
 

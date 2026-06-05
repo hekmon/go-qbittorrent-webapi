@@ -677,14 +677,11 @@ func (c *Client) AddNewTorrents(ctx context.Context, files map[string][]byte, ur
 	}
 	req.Header.Set(contentTypeHeader, contentType)
 	// execute request
-	var output string
-	if err = c.requestExecute(req, &output, true); err != nil {
+	// output is nil because the server response format varies across versions:
+	// some return text/plain ("Ok."), others application/json. Relying on the
+	// HTTP 200 status is sufficient and avoids version-specific decoding issues.
+	if err = c.requestExecute(req, nil, true); err != nil {
 		err = fmt.Errorf("executing request failed: %w", err)
-		return
-	}
-	if output != expectedSuccessResponse {
-		err = fmt.Errorf("unexpected server response: %s", output)
-		return
 	}
 	return
 }
