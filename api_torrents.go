@@ -137,7 +137,7 @@ type TorrentInfos struct {
 	FirstLastPiecePrio bool          `json:"f_l_piece_prio"`     // True if first last piece are prioritized
 	ForceStart         bool          `json:"force_start"`        // True if force start is enabled for this torrent
 	Hash               string        `json:"hash"`               // Torrent hash
-	Private            bool          `json:"isPrivate"`          // True if torrent is from a private tracker
+	Private            bool          `json:"-"`                  // True if torrent is from a private tracker. The wiki documents `isPrivate` but qBittorrent v5+ sends `is_private`.
 	LastActivity       time.Time     `json:"last_activity"`      // Last time when a chunk was downloaded/uploaded
 	MagnetURI          *url.URL      `json:"magnet_uri"`         // Magnet URI corresponding to this torrent (use .Query() to access values)
 	MaxRatio           float64       `json:"max_ratio"`          // Maximum share ratio until torrent is stopped from seeding/uploading
@@ -199,6 +199,9 @@ func (ti *TorrentInfos) UnmarshalJSON(data []byte) (err error) {
 		Uploaded           int    `json:"uploaded"`           // Amount of data uploaded
 		UploadedSession    int    `json:"uploaded_session"`   // Amount of data uploaded this session
 		UploadSpeed        int    `json:"upspeed"`            // Torrent upload speed (bytes/s)
+		// Unmarshal both `isPrivate` (documented) and `is_private` (qBittorrent v5+) into Private.
+		IsPrivateDoc   bool `json:"isPrivate"`
+		IsPrivateSnake bool `json:"is_private"`
 	}{
 		mask: (*mask)(ti),
 	}
@@ -207,6 +210,7 @@ func (ti *TorrentInfos) UnmarshalJSON(data []byte) (err error) {
 		return
 	}
 	// Adapt to golang types
+	ti.Private = tmp.IsPrivateDoc || tmp.IsPrivateSnake
 	ti.AddedOn = time.Unix(tmp.AddedOn, 0)
 	ti.AmountLeft = cunits.ImportInBytes(float64(tmp.AmountLeft))
 	ti.Completed = cunits.ImportInBytes(float64(tmp.Completed))
@@ -271,8 +275,11 @@ func (ti *TorrentInfos) MarshalJSON() ([]byte, error) {
 		Uploaded           int    `json:"uploaded"`           // Amount of data uploaded
 		UploadedSession    int    `json:"uploaded_session"`   // Amount of data uploaded this session
 		UploadSpeed        int    `json:"upspeed"`            // Torrent upload speed (bytes/s)
+		// Marshal `is_private` to match the wire format used by qBittorrent v5+.
+		IsPrivate bool `json:"is_private"`
 	}{
-		mask: mask(*ti),
+		mask:      mask(*ti),
+		IsPrivate: ti.Private,
 	}
 	// Adapt to JSON types
 	tmp.AddedOn = ti.AddedOn.Unix()
@@ -384,7 +391,7 @@ type TorrentGenericProperties struct {
 	TotalSize              cunits.Bits   `json:"total_size"`               // Torrent total size
 	UploadSpeedAvg         Speed         `json:"up_speed_avg"`             // Torrent average upload speed
 	UploadSpeed            Speed         `json:"up_speed"`                 // Torrent upload speed
-	Private                bool          `json:"isPrivate"`                // True if torrent is from a private tracker
+	Private                bool          `json:"-"`                        // True if torrent is from a private tracker. The wiki documents `isPrivate` but qBittorrent v5+ sends `is_private`.
 }
 
 func (tgp *TorrentGenericProperties) UnmarshalJSON(data []byte) (err error) {
@@ -413,6 +420,9 @@ func (tgp *TorrentGenericProperties) UnmarshalJSON(data []byte) (err error) {
 		TotalSize              int   `json:"total_size"`               // Torrent total size (bytes)
 		UploadSpeedAvg         int   `json:"up_speed_avg"`             // Torrent average upload speed (bytes/second)
 		UploadSpeed            int   `json:"up_speed"`                 // Torrent upload speed (bytes/second)
+		// Unmarshal both `isPrivate` (documented) and `is_private` (qBittorrent v5+) into Private.
+		IsPrivateDoc   bool `json:"isPrivate"`
+		IsPrivateSnake bool `json:"is_private"`
 	}{
 		mask: (*mask)(tgp),
 	}
@@ -421,6 +431,7 @@ func (tgp *TorrentGenericProperties) UnmarshalJSON(data []byte) (err error) {
 		return
 	}
 	// Adapt to golang types
+	tgp.Private = tmp.IsPrivateDoc || tmp.IsPrivateSnake
 	tgp.CreationDate = time.Unix(tmp.CreationDate, 0)
 	tgp.PieceSize = cunits.ImportInBytes(float64(tmp.PieceSize))
 	tgp.TotalWasted = cunits.ImportInBytes(float64(tmp.TotalWasted))
@@ -471,8 +482,11 @@ func (tgp *TorrentGenericProperties) MarshalJSON() ([]byte, error) {
 		TotalSize              int   `json:"total_size"`               // Torrent total size (bytes)
 		UploadSpeedAvg         int   `json:"up_speed_avg"`             // Torrent average upload speed (bytes/second)
 		UploadSpeed            int   `json:"up_speed"`                 // Torrent upload speed (bytes/second)
+		// Marshal `is_private` to match the wire format used by qBittorrent v5+.
+		IsPrivate bool `json:"is_private"`
 	}{
 		mask:                   mask(*tgp),
+		IsPrivate:              tgp.Private,
 		CreationDate:           tgp.CreationDate.Unix(),
 		PieceSize:              int(tgp.PieceSize.Bytes()),
 		TotalWasted:            int(tgp.TotalWasted.Bytes()),
