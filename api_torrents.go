@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"mime/multipart"
+	"net/textproto"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -24,7 +25,8 @@ import (
 */
 
 const (
-	torrentsAPIName = "torrents"
+	torrentsAPIName  = "torrents"
+	tagListSeparator = ","
 )
 
 /*
@@ -225,7 +227,7 @@ func (ti *TorrentInfos) UnmarshalJSON(data []byte) (err error) {
 	ti.SeenComplete = time.Unix(tmp.SeenComplete, 0)
 	ti.Size = cunits.ImportInBytes(float64(tmp.Size))
 	if tmp.Tags != "" {
-		ti.Tags = strings.Split(tmp.Tags, ",")
+		ti.Tags = strings.Split(tmp.Tags, tagListSeparator)
 		for i := range ti.Tags {
 			ti.Tags[i] = strings.TrimSpace(ti.Tags[i])
 		}
@@ -289,7 +291,7 @@ func (ti *TorrentInfos) MarshalJSON() ([]byte, error) {
 	tmp.SeedingTimeLimit = int(ti.SeedingTimeLimit.Seconds())
 	tmp.SeenComplete = ti.SeenComplete.Unix()
 	tmp.Size = int(ti.Size.Bytes())
-	tmp.Tags = strings.Join(ti.Tags, ", ")
+	tmp.Tags = strings.Join(ti.Tags, tagListSeparator)
 	tmp.TimeActive = int(ti.TimeActive.Seconds())
 	tmp.TotalSize = int(ti.TotalSize.Bytes())
 	tmp.UploadSpeedLimit = ti.UploadSpeedLimit.ToBytes()
@@ -684,6 +686,15 @@ func (c *Client) AddNewTorrents(ctx context.Context, files map[string][]byte, ur
 		return
 	}
 	return
+}
+
+var quoteEscaper = strings.NewReplacer("\\", "\\\\", `"`, "\\\"")
+
+func createBtFormFile(w *multipart.Writer, filename string) (io.Writer, error) {
+	h := make(textproto.MIMEHeader, 2)
+	h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="torrents"; filename="%s"`, quoteEscaper.Replace(filename)))
+	h.Set("Content-Type", "application/x-bittorrent")
+	return w.CreatePart(h)
 }
 
 func torrentAddGeneratePayload(files map[string][]byte, urls []*url.URL, options *AddNewTorrentsOptions) (payload bytes.Buffer, contentType string, err error) {
