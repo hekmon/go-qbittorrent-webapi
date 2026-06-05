@@ -166,14 +166,14 @@ If you need more, feel free to open an issue or a PR.
 
 ### Transfer info
 
-- [ ] Get global transfer info
-- [ ] Get alternative speed limits state
-- [ ] Toggle alternative speed limits
-- [ ] Get global download limit
-- [ ] Set global download limit
-- [ ] Get global upload limit
-- [ ] Set global upload limit
-- [ ] Ban peers
+- [x] Get global transfer info
+- [x] Get alternative speed limits state
+- [x] Toggle alternative speed limits
+- [x] Get global download limit
+- [x] Set global download limit
+- [x] Get global upload limit
+- [x] Set global upload limit
+- [x] Ban peers
 
 ### Torrent management
 
