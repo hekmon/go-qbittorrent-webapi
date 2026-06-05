@@ -311,6 +311,400 @@ func TestTorrentsDomain(t *testing.T) {
 		}
 		t.Logf("file-added torrent trackers: %d", len(trackers))
 
+		// ── extended endpoint tests ─────────────────────────────
+		findTorrent := func(list []TorrentInfos, h string) *TorrentInfos {
+			for i := range list {
+				if list[i].Hash == h {
+					return &list[i]
+				}
+			}
+			return nil
+		}
+
+		// web seeds
+		if seeds, err := c.GetTorrentWebSeeds(ctx, testHash); err != nil {
+			t.Fatalf("GetTorrentWebSeeds: %v", err)
+		} else {
+			t.Logf("web seeds: %d", len(seeds))
+		}
+
+		// contents
+		contents, err := c.GetTorrentContents(ctx, testHash, nil)
+		if err != nil {
+			t.Fatalf("GetTorrentContents: %v", err)
+		}
+		if len(contents) == 0 {
+			t.Fatal("expected at least one file in torrent contents")
+		}
+		for i, f := range contents {
+			if f.Name == "" {
+				t.Fatalf("content[%d]: Name is empty", i)
+			}
+			if f.Size <= 0 {
+				t.Fatalf("content[%d]: Size is zero", i)
+			}
+		}
+		t.Logf("torrent contents: %d files", len(contents))
+
+		// pieces states & hashes
+		states, err := c.GetTorrentPiecesStates(ctx, testHash)
+		if err != nil {
+			t.Fatalf("GetTorrentPiecesStates: %v", err)
+		}
+		if len(states) == 0 {
+			t.Fatal("expected at least one piece state")
+		}
+		pieceHashes, err := c.GetTorrentPiecesHashes(ctx, testHash)
+		if err != nil {
+			t.Fatalf("GetTorrentPiecesHashes: %v", err)
+		}
+		if len(pieceHashes) == 0 {
+			t.Fatal("expected at least one piece hash")
+		}
+		if len(pieceHashes) != len(states) {
+			t.Fatalf("piece hashes count (%d) != piece states count (%d)", len(pieceHashes), len(states))
+		}
+		t.Logf("pieces: %d states, %d hashes", len(states), len(pieceHashes))
+
+		// start torrent (currently paused) and verify state changed
+		if err := c.StartTorrents(ctx, []string{testHash}); err != nil {
+			t.Fatalf("StartTorrents: %v", err)
+		}
+		listAfterStart, err := c.GetTorrentList(ctx, nil)
+		if err != nil {
+			t.Fatalf("GetTorrentList (after start): %v", err)
+		}
+		ti := findTorrent(listAfterStart, testHash)
+		if ti == nil {
+			t.Fatal("torrent not found after start")
+		}
+		if ti.State == TorrentStatePausedDownloading || ti.State == TorrentStatePausedUploading {
+			t.Fatalf("expected torrent to be running after StartTorrents, got state %q", ti.State)
+		}
+
+		// stop torrent and verify state is paused
+		if err := c.StopTorrents(ctx, []string{testHash}); err != nil {
+			t.Fatalf("StopTorrents: %v", err)
+		}
+		listAfterStop, err := c.GetTorrentList(ctx, nil)
+		if err != nil {
+			t.Fatalf("GetTorrentList (after stop): %v", err)
+		}
+		ti = findTorrent(listAfterStop, testHash)
+		if ti == nil {
+			t.Fatal("torrent not found after stop")
+		}
+		if ti.State != TorrentStatePausedDownloading && ti.State != TorrentStatePausedUploading {
+			t.Fatalf("expected torrent to be paused after StopTorrents, got state %q", ti.State)
+		}
+
+		// download / upload limits (set, verify, reset)
+		limit := GetSpeedFromBytes(1024 * 1024) // 1 MiB/s
+		if err := c.SetTorrentDownloadLimit(ctx, []string{testHash}, limit); err != nil {
+			t.Fatalf("SetTorrentDownloadLimit: %v", err)
+		}
+		dlLimits, err := c.GetTorrentDownloadLimit(ctx, []string{testHash})
+		if err != nil {
+			t.Fatalf("GetTorrentDownloadLimit: %v", err)
+		}
+		if dlLimits[testHash] != limit.ToBytes() {
+			t.Fatalf("download limit mismatch: expected %d, got %d", limit.ToBytes(), dlLimits[testHash])
+		}
+		if err := c.SetTorrentUploadLimit(ctx, []string{testHash}, limit); err != nil {
+			t.Fatalf("SetTorrentUploadLimit: %v", err)
+		}
+		ulLimits, err := c.GetTorrentUploadLimit(ctx, []string{testHash})
+		if err != nil {
+			t.Fatalf("GetTorrentUploadLimit: %v", err)
+		}
+		if ulLimits[testHash] != limit.ToBytes() {
+			t.Fatalf("upload limit mismatch: expected %d, got %d", limit.ToBytes(), ulLimits[testHash])
+		}
+		// reset to unlimited
+		if err := c.SetTorrentDownloadLimit(ctx, []string{testHash}, UnlimitedSpeedLimit); err != nil {
+			t.Fatalf("SetTorrentDownloadLimit (reset): %v", err)
+		}
+		if err := c.SetTorrentUploadLimit(ctx, []string{testHash}, UnlimitedSpeedLimit); err != nil {
+			t.Fatalf("SetTorrentUploadLimit (reset): %v", err)
+		}
+
+		// share limits
+		if err := c.SetTorrentShareLimits(ctx, []string{testHash}, 2.0, 60, -1); err != nil {
+			t.Fatalf("SetTorrentShareLimits: %v", err)
+		}
+
+		// category lifecycle
+		catName := "testcat_" + testHash[:8]
+		catPath := t.TempDir()
+		if err := c.CreateCategory(ctx, catName, catPath); err != nil {
+			t.Fatalf("CreateCategory: %v", err)
+		}
+		if err := c.SetTorrentCategory(ctx, []string{testHash}, catName); err != nil {
+			t.Fatalf("SetTorrentCategory: %v", err)
+		}
+		listByCat, err := c.GetTorrentList(ctx, &ListFilters{Category: &catName})
+		if err != nil {
+			t.Fatalf("GetTorrentList (by category): %v", err)
+		}
+		if len(listByCat) != 1 || listByCat[0].Hash != testHash {
+			t.Fatalf("category filter: expected 1 torrent with hash %s, got %+v", testHash, listByCat)
+		}
+		newCatPath := t.TempDir()
+		if err := c.EditCategory(ctx, catName, newCatPath); err != nil {
+			t.Fatalf("EditCategory: %v", err)
+		}
+		cats, err := c.GetAllCategories(ctx)
+		if err != nil {
+			t.Fatalf("GetAllCategories: %v", err)
+		}
+		if cat, ok := cats[catName]; !ok || cat.SavePath != newCatPath {
+			t.Fatalf("category edit not reflected: got %+v", cat)
+		}
+		if err := c.RemoveCategories(ctx, []string{catName}); err != nil {
+			t.Fatalf("RemoveCategories: %v", err)
+		}
+
+		// tags lifecycle
+		tagName := "testtag_" + testHash[:8]
+		if err := c.CreateTags(ctx, []string{tagName}); err != nil {
+			t.Fatalf("CreateTags: %v", err)
+		}
+		if err := c.AddTorrentTags(ctx, []string{testHash}, []string{tagName}); err != nil {
+			t.Fatalf("AddTorrentTags: %v", err)
+		}
+		listWithTag, err := c.GetTorrentList(ctx, &ListFilters{Tag: &tagName})
+		if err != nil {
+			t.Fatalf("GetTorrentList (by tag): %v", err)
+		}
+		if len(listWithTag) != 1 || listWithTag[0].Hash != testHash {
+			t.Fatalf("tag filter: expected 1 torrent with hash %s, got %+v", testHash, listWithTag)
+		}
+		if err := c.RemoveTorrentTags(ctx, []string{testHash}, []string{tagName}); err != nil {
+			t.Fatalf("RemoveTorrentTags: %v", err)
+		}
+		listWithoutTag, err := c.GetTorrentList(ctx, &ListFilters{Tag: &tagName})
+		if err != nil {
+			t.Fatalf("GetTorrentList (after tag removal): %v", err)
+		}
+		if len(listWithoutTag) != 0 {
+			t.Fatalf("expected 0 torrents with tag %q after removal, got %d", tagName, len(listWithoutTag))
+		}
+		if err := c.DeleteTags(ctx, []string{tagName}); err != nil {
+			t.Fatalf("DeleteTags: %v", err)
+		}
+
+		// rename torrent and verify
+		if err := c.RenameTorrent(ctx, testHash, "sintel_test"); err != nil {
+			t.Fatalf("RenameTorrent: %v", err)
+		}
+		listAfterRename, err := c.GetTorrentList(ctx, nil)
+		if err != nil {
+			t.Fatalf("GetTorrentList (after rename): %v", err)
+		}
+		ti = findTorrent(listAfterRename, testHash)
+		if ti == nil || ti.Name != "sintel_test" {
+			t.Fatalf("rename not reflected: expected Name=%q, got %q", "sintel_test", ti.Name)
+		}
+
+		// toggles with verification
+		// sequential download
+		origSeq := ti.SequentialDownload
+		if err := c.ToggleSequentialDownload(ctx, []string{testHash}); err != nil {
+			t.Fatalf("ToggleSequentialDownload: %v", err)
+		}
+		listAfterToggle, err := c.GetTorrentList(ctx, nil)
+		if err != nil {
+			t.Fatalf("GetTorrentList (after seq toggle): %v", err)
+		}
+		ti = findTorrent(listAfterToggle, testHash)
+		if ti.SequentialDownload == origSeq {
+			t.Fatalf("sequential download toggle not reflected")
+		}
+		// toggle back
+		if err := c.ToggleSequentialDownload(ctx, []string{testHash}); err != nil {
+			t.Fatalf("ToggleSequentialDownload (back): %v", err)
+		}
+
+		// first/last piece priority
+		origFL := ti.FirstLastPiecePrio
+		if err := c.ToggleFirstLastPiecePrio(ctx, []string{testHash}); err != nil {
+			t.Fatalf("ToggleFirstLastPiecePrio: %v", err)
+		}
+		listAfterFL, err := c.GetTorrentList(ctx, nil)
+		if err != nil {
+			t.Fatalf("GetTorrentList (after fl toggle): %v", err)
+		}
+		ti = findTorrent(listAfterFL, testHash)
+		if ti.FirstLastPiecePrio == origFL {
+			t.Fatalf("first/last piece prio toggle not reflected")
+		}
+		// toggle back
+		if err := c.ToggleFirstLastPiecePrio(ctx, []string{testHash}); err != nil {
+			t.Fatalf("ToggleFirstLastPiecePrio (back): %v", err)
+		}
+
+		// force start
+		if err := c.SetForceStart(ctx, []string{testHash}, true); err != nil {
+			t.Fatalf("SetForceStart: %v", err)
+		}
+		listAfterFS, err := c.GetTorrentList(ctx, nil)
+		if err != nil {
+			t.Fatalf("GetTorrentList (after force start): %v", err)
+		}
+		ti = findTorrent(listAfterFS, testHash)
+		if !ti.ForceStart {
+			t.Fatalf("force start not reflected")
+		}
+		if err := c.SetForceStart(ctx, []string{testHash}, false); err != nil {
+			t.Fatalf("SetForceStart (reset): %v", err)
+		}
+
+		// auto management
+		if err := c.SetAutoManagement(ctx, []string{testHash}, false); err != nil {
+			t.Fatalf("SetAutoManagement: %v", err)
+		}
+		listAfterAM, err := c.GetTorrentList(ctx, nil)
+		if err != nil {
+			t.Fatalf("GetTorrentList (after auto mgmt): %v", err)
+		}
+		ti = findTorrent(listAfterAM, testHash)
+		if ti.AutoTMM {
+			t.Fatalf("auto management disable not reflected")
+		}
+		if err := c.SetAutoManagement(ctx, []string{testHash}, true); err != nil {
+			t.Fatalf("SetAutoManagement (reset): %v", err)
+		}
+
+		// super seeding
+		if err := c.SetSuperSeeding(ctx, []string{testHash}, true); err != nil {
+			t.Fatalf("SetSuperSeeding: %v", err)
+		}
+		listAfterSS, err := c.GetTorrentList(ctx, nil)
+		if err != nil {
+			t.Fatalf("GetTorrentList (after super seeding): %v", err)
+		}
+		ti = findTorrent(listAfterSS, testHash)
+		if !ti.SuperSeeding {
+			t.Fatalf("super seeding not reflected")
+		}
+		if err := c.SetSuperSeeding(ctx, []string{testHash}, false); err != nil {
+			t.Fatalf("SetSuperSeeding (reset): %v", err)
+		}
+
+		// location
+		newLoc := t.TempDir()
+		if err := c.SetTorrentLocation(ctx, []string{testHash}, newLoc); err != nil {
+			t.Fatalf("SetTorrentLocation: %v", err)
+		}
+
+		// recheck / reannounce
+		if err := c.RecheckTorrents(ctx, []string{testHash}); err != nil {
+			t.Fatalf("RecheckTorrents: %v", err)
+		}
+		if err := c.ReannounceTorrents(ctx, []string{testHash}); err != nil {
+			t.Fatalf("ReannounceTorrents: %v", err)
+		}
+
+		// file priority
+		if len(contents) > 0 {
+			firstID := contents[0].Index
+			if err := c.SetFilePriority(ctx, testHash, []int{firstID}, 7); err != nil {
+				t.Fatalf("SetFilePriority: %v", err)
+			}
+			contentsAfter, err := c.GetTorrentContents(ctx, testHash, nil)
+			if err != nil {
+				t.Fatalf("GetTorrentContents (after prio): %v", err)
+			}
+			var found bool
+			for _, f := range contentsAfter {
+				if f.Index == firstID {
+					found = true
+					if f.Priority != 7 {
+						t.Fatalf("file priority not reflected: expected 7, got %d", f.Priority)
+					}
+					break
+				}
+			}
+			if !found {
+				t.Fatalf("file with index %d not found after priority change", firstID)
+			}
+		}
+
+		// trackers add / edit / remove
+		origTrackers, err := c.GetTorrentTrackers(ctx, testHash)
+		if err != nil {
+			t.Fatalf("GetTorrentTrackers (before): %v", err)
+		}
+		dummy := "http://127.0.0.1:9999/announce"
+		if err := c.AddTrackers(ctx, testHash, []string{dummy}); err != nil {
+			t.Fatalf("AddTrackers: %v", err)
+		}
+		trackersAfterAdd, err := c.GetTorrentTrackers(ctx, testHash)
+		if err != nil {
+			t.Fatalf("GetTorrentTrackers (after add): %v", err)
+		}
+		if len(trackersAfterAdd) != len(origTrackers)+1 {
+			t.Fatalf("expected %d trackers after add, got %d", len(origTrackers)+1, len(trackersAfterAdd))
+		}
+		newDummy := "http://127.0.0.1:9998/announce"
+		if err := c.EditTracker(ctx, testHash, dummy, newDummy); err != nil {
+			t.Fatalf("EditTracker: %v", err)
+		}
+		trackersAfterEdit, err := c.GetTorrentTrackers(ctx, testHash)
+		if err != nil {
+			t.Fatalf("GetTorrentTrackers (after edit): %v", err)
+		}
+		foundEdited := false
+		for _, tr := range trackersAfterEdit {
+			if tr.URL.String() == newDummy {
+				foundEdited = true
+				break
+			}
+		}
+		if !foundEdited {
+			t.Fatalf("edited tracker %q not found", newDummy)
+		}
+		if err := c.RemoveTrackers(ctx, testHash, []string{newDummy}); err != nil {
+			t.Fatalf("RemoveTrackers: %v", err)
+		}
+		trackersAfterRemove, err := c.GetTorrentTrackers(ctx, testHash)
+		if err != nil {
+			t.Fatalf("GetTorrentTrackers (after remove): %v", err)
+		}
+		if len(trackersAfterRemove) != len(origTrackers) {
+			t.Fatalf("expected %d trackers after remove, got %d", len(origTrackers), len(trackersAfterRemove))
+		}
+
+		// queue priority
+		if err := c.IncreaseTorrentPriority(ctx, []string{testHash}); err != nil {
+			var he HTTPError
+			if errors.As(err, &he) && he == 409 {
+				t.Logf("torrent queueing not enabled, skipping priority tests")
+			} else {
+				t.Fatalf("IncreaseTorrentPriority: %v", err)
+			}
+		} else {
+			if err := c.DecreaseTorrentPriority(ctx, []string{testHash}); err != nil {
+				t.Fatalf("DecreaseTorrentPriority: %v", err)
+			}
+			if err := c.TopTorrentPriority(ctx, []string{testHash}); err != nil {
+				t.Fatalf("TopTorrentPriority: %v", err)
+			}
+			if err := c.BottomTorrentPriority(ctx, []string{testHash}); err != nil {
+				t.Fatalf("BottomTorrentPriority: %v", err)
+			}
+		}
+
+		// add peers
+		if err := c.AddPeers(ctx, []string{testHash}, []string{"127.0.0.1:12345"}); err != nil {
+			var he HTTPError
+			if errors.As(err, &he) && he == 400 {
+				t.Logf("fake peer rejected by server, skipping")
+			} else {
+				t.Fatalf("AddPeers: %v", err)
+			}
+		}
+
 		// delete
 		if err := c.DeleteTorrents(ctx, []string{testHash}, false); err != nil {
 			t.Fatalf("DeleteTorrents (file): %v", err)

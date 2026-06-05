@@ -695,6 +695,932 @@ func createBtFormFile(w *multipart.Writer, filename string) (io.Writer, error) {
 	return w.CreatePart(h)
 }
 
+/*
+	torrent web seeds
+*/
+
+// GetTorrentWebSeeds returns the list of web seeds for a torrent.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#get-torrent-web-seeds
+func (c *Client) GetTorrentWebSeeds(ctx context.Context, hash string) (webSeeds []TorrentWebSeed, err error) {
+	req, err := c.requestBuild(ctx, "GET", torrentsAPIName, "webseeds", map[string]string{
+		"hash": hash,
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, &webSeeds, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+// TorrentWebSeed represents a single web seed for a torrent.
+type TorrentWebSeed struct {
+	URL *url.URL `json:"url"` // Web seed URL
+}
+
+func (tw *TorrentWebSeed) UnmarshalJSON(data []byte) (err error) {
+	type mask TorrentWebSeed
+	tmp := struct {
+		*mask
+		URL string `json:"url"`
+	}{
+		mask: (*mask)(tw),
+	}
+	if err = json.Unmarshal(data, &tmp); err != nil {
+		return
+	}
+	if tw.URL, err = url.Parse(tmp.URL); err != nil {
+		err = fmt.Errorf("parsing web seed URL failed: %w", err)
+		return
+	}
+	return
+}
+
+func (tw *TorrentWebSeed) MarshalJSON() ([]byte, error) {
+	type mask TorrentWebSeed
+	tmp := struct {
+		*mask
+		URL string `json:"url"`
+	}{
+		mask: (*mask)(tw),
+		URL:  tw.URL.String(),
+	}
+	return json.Marshal(tmp)
+}
+
+/*
+	torrent contents
+*/
+
+// GetTorrentContents returns the contents of a torrent.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#get-torrent-contents
+func (c *Client) GetTorrentContents(ctx context.Context, hash string, indexes []int) (contents []TorrentContent, err error) {
+	params := map[string]string{
+		"hash": hash,
+	}
+	if len(indexes) > 0 {
+		indexStrs := make([]string, len(indexes))
+		for i, idx := range indexes {
+			indexStrs[i] = strconv.Itoa(idx)
+		}
+		params["indexes"] = strings.Join(indexStrs, hashListSeparator)
+	}
+	req, err := c.requestBuild(ctx, "GET", torrentsAPIName, "files", params, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, &contents, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+// TorrentContent represents a single file within a torrent.
+type TorrentContent struct {
+	Index        int     `json:"index"`        // File index
+	Name         string  `json:"name"`         // File name (including relative path)
+	Size         int64   `json:"size"`         // File size (bytes)
+	Progress     float64 `json:"progress"`     // File progress (percentage/100)
+	Priority     int     `json:"priority"`     // File priority
+	IsSeed       bool    `json:"is_seed"`      // True if file is seeding/complete
+	PieceRange   []int   `json:"piece_range"`  // First and last piece index (inclusive)
+	Availability float64 `json:"availability"` // Percentage of file pieces currently available
+}
+
+/*
+	torrent pieces states
+*/
+
+// GetTorrentPiecesStates returns the states of all pieces of a torrent.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#get-torrent-pieces-states
+func (c *Client) GetTorrentPiecesStates(ctx context.Context, hash string) (states []int, err error) {
+	req, err := c.requestBuild(ctx, "GET", torrentsAPIName, "pieceStates", map[string]string{
+		"hash": hash,
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, &states, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+/*
+	torrent pieces hashes
+*/
+
+// GetTorrentPiecesHashes returns the hashes of all pieces of a torrent.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#get-torrent-pieces-hashes
+func (c *Client) GetTorrentPiecesHashes(ctx context.Context, hash string) (hashes []string, err error) {
+	req, err := c.requestBuild(ctx, "GET", torrentsAPIName, "pieceHashes", map[string]string{
+		"hash": hash,
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, &hashes, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+/*
+	pause torrents
+*/
+
+// StopTorrents pauses one or more torrents.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#pause-torrents
+func (c *Client) StopTorrents(ctx context.Context, hashes []string) (err error) {
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "stop", map[string]string{
+		"hashes": strings.Join(hashes, hashListSeparator),
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, nil, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+/*
+	resume torrents
+*/
+
+// StartTorrents resumes one or more torrents.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#resume-torrents
+func (c *Client) StartTorrents(ctx context.Context, hashes []string) (err error) {
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "start", map[string]string{
+		"hashes": strings.Join(hashes, hashListSeparator),
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, nil, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+/*
+	recheck torrents
+*/
+
+// RecheckTorrents rechecks one or more torrents.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#recheck-torrents
+func (c *Client) RecheckTorrents(ctx context.Context, hashes []string) (err error) {
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "recheck", map[string]string{
+		"hashes": strings.Join(hashes, hashListSeparator),
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, nil, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+/*
+	reannounce torrents
+*/
+
+// ReannounceTorrents reannounces one or more torrents.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#reannounce-torrents
+func (c *Client) ReannounceTorrents(ctx context.Context, hashes []string) (err error) {
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "reannounce", map[string]string{
+		"hashes": strings.Join(hashes, hashListSeparator),
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, nil, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+/*
+	increase torrent priority
+*/
+
+// IncreaseTorrentPriority increases the priority of one or more torrents.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#increase-torrent-priority
+func (c *Client) IncreaseTorrentPriority(ctx context.Context, hashes []string) (err error) {
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "increasePrio", map[string]string{
+		"hashes": strings.Join(hashes, hashListSeparator),
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, nil, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+/*
+	decrease torrent priority
+*/
+
+// DecreaseTorrentPriority decreases the priority of one or more torrents.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#decrease-torrent-priority
+func (c *Client) DecreaseTorrentPriority(ctx context.Context, hashes []string) (err error) {
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "decreasePrio", map[string]string{
+		"hashes": strings.Join(hashes, hashListSeparator),
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, nil, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+/*
+	maximal torrent priority
+*/
+
+// TopTorrentPriority sets the maximum priority for one or more torrents.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#maximal-torrent-priority
+func (c *Client) TopTorrentPriority(ctx context.Context, hashes []string) (err error) {
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "topPrio", map[string]string{
+		"hashes": strings.Join(hashes, hashListSeparator),
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, nil, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+/*
+	minimal torrent priority
+*/
+
+// BottomTorrentPriority sets the minimum priority for one or more torrents.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#minimal-torrent-priority
+func (c *Client) BottomTorrentPriority(ctx context.Context, hashes []string) (err error) {
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "bottomPrio", map[string]string{
+		"hashes": strings.Join(hashes, hashListSeparator),
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, nil, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+/*
+	toggle sequential download
+*/
+
+// ToggleSequentialDownload toggles sequential download for one or more torrents.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#toggle-sequential-download
+func (c *Client) ToggleSequentialDownload(ctx context.Context, hashes []string) (err error) {
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "toggleSequentialDownload", map[string]string{
+		"hashes": strings.Join(hashes, hashListSeparator),
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, nil, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+/*
+	toggle first/last piece priority
+*/
+
+// ToggleFirstLastPiecePrio toggles first/last piece priority for one or more torrents.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#set-firstlast-piece-priority
+func (c *Client) ToggleFirstLastPiecePrio(ctx context.Context, hashes []string) (err error) {
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "toggleFirstLastPiecePrio", map[string]string{
+		"hashes": strings.Join(hashes, hashListSeparator),
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, nil, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+/*
+	set force start
+*/
+
+// SetForceStart sets the force start state for one or more torrents.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#set-force-start
+func (c *Client) SetForceStart(ctx context.Context, hashes []string, value bool) (err error) {
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "setForceStart", map[string]string{
+		"hashes": strings.Join(hashes, hashListSeparator),
+		"value":  strconv.FormatBool(value),
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, nil, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+/*
+	set super seeding
+*/
+
+// SetSuperSeeding sets the super seeding state for one or more torrents.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#set-super-seeding
+func (c *Client) SetSuperSeeding(ctx context.Context, hashes []string, value bool) (err error) {
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "setSuperSeeding", map[string]string{
+		"hashes": strings.Join(hashes, hashListSeparator),
+		"value":  strconv.FormatBool(value),
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, nil, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+/*
+	set automatic torrent management
+*/
+
+// SetAutoManagement sets the automatic torrent management state for one or more torrents.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#set-automatic-torrent-management
+func (c *Client) SetAutoManagement(ctx context.Context, hashes []string, value bool) (err error) {
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "setAutoManagement", map[string]string{
+		"hashes": strings.Join(hashes, hashListSeparator),
+		"enable": strconv.FormatBool(value),
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, nil, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+/*
+	add trackers
+*/
+
+// AddTrackers adds trackers to a torrent.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#add-trackers-to-torrent
+func (c *Client) AddTrackers(ctx context.Context, hash string, urls []string) (err error) {
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "addTrackers", map[string]string{
+		"hash": hash,
+		"urls": strings.Join(urls, "\n"),
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, nil, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+/*
+	edit trackers
+*/
+
+// EditTracker edits a tracker URL for a torrent.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#edit-trackers
+func (c *Client) EditTracker(ctx context.Context, hash string, origUrl string, newUrl string) (err error) {
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "editTracker", map[string]string{
+		"hash":    hash,
+		"origUrl": origUrl,
+		"newUrl":  newUrl,
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, nil, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+/*
+	remove trackers
+*/
+
+// RemoveTrackers removes trackers from a torrent.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#remove-trackers
+func (c *Client) RemoveTrackers(ctx context.Context, hash string, urls []string) (err error) {
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "removeTrackers", map[string]string{
+		"hash": hash,
+		"urls": strings.Join(urls, "|"),
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, nil, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+/*
+	add peers
+*/
+
+// AddPeers adds peers to torrents.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#add-peers
+func (c *Client) AddPeers(ctx context.Context, hashes []string, peers []string) (err error) {
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "addPeers", map[string]string{
+		"hashes": strings.Join(hashes, hashListSeparator),
+		"peers":  strings.Join(peers, "|"),
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, nil, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+/*
+	get torrent download limit
+*/
+
+// GetTorrentDownloadLimit returns the download limit for the given torrents.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#get-torrent-download-limit
+func (c *Client) GetTorrentDownloadLimit(ctx context.Context, hashes []string) (limits map[string]int, err error) {
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "downloadLimit", map[string]string{
+		"hashes": strings.Join(hashes, hashListSeparator),
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	var raw json.RawMessage
+	if err = c.requestExecute(req, &raw, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+		return
+	}
+	if err = json.Unmarshal(raw, &limits); err != nil {
+		err = fmt.Errorf("decoding limits failed: %w", err)
+	}
+	return
+}
+
+/*
+	set torrent download limit
+*/
+
+// SetTorrentDownloadLimit sets the download limit for the given torrents.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#set-torrent-download-limit
+func (c *Client) SetTorrentDownloadLimit(ctx context.Context, hashes []string, limit Speed) (err error) {
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "setDownloadLimit", map[string]string{
+		"hashes": strings.Join(hashes, hashListSeparator),
+		"limit":  strconv.Itoa(limit.ToBytes()),
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, nil, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+/*
+	get torrent upload limit
+*/
+
+// GetTorrentUploadLimit returns the upload limit for the given torrents.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#get-torrent-upload-limit
+func (c *Client) GetTorrentUploadLimit(ctx context.Context, hashes []string) (limits map[string]int, err error) {
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "uploadLimit", map[string]string{
+		"hashes": strings.Join(hashes, hashListSeparator),
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	var raw json.RawMessage
+	if err = c.requestExecute(req, &raw, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+		return
+	}
+	if err = json.Unmarshal(raw, &limits); err != nil {
+		err = fmt.Errorf("decoding limits failed: %w", err)
+	}
+	return
+}
+
+/*
+	set torrent upload limit
+*/
+
+// SetTorrentUploadLimit sets the upload limit for the given torrents.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#set-torrent-upload-limit
+func (c *Client) SetTorrentUploadLimit(ctx context.Context, hashes []string, limit Speed) (err error) {
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "setUploadLimit", map[string]string{
+		"hashes": strings.Join(hashes, hashListSeparator),
+		"limit":  strconv.Itoa(limit.ToBytes()),
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, nil, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+/*
+	set torrent share limit
+*/
+
+// SetTorrentShareLimits sets the share limits for the given torrents.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#set-torrent-share-limit
+func (c *Client) SetTorrentShareLimits(ctx context.Context, hashes []string, ratioLimit float64, seedingTimeLimit int, inactiveSeedingTimeLimit int) (err error) {
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "setShareLimits", map[string]string{
+		"hashes":                   strings.Join(hashes, hashListSeparator),
+		"ratioLimit":               strconv.FormatFloat(ratioLimit, 'f', -1, 64),
+		"seedingTimeLimit":         strconv.Itoa(seedingTimeLimit),
+		"inactiveSeedingTimeLimit": strconv.Itoa(inactiveSeedingTimeLimit),
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, nil, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+/*
+	set torrent location
+*/
+
+// SetTorrentLocation sets the download location for the given torrents.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#set-torrent-location
+func (c *Client) SetTorrentLocation(ctx context.Context, hashes []string, location string) (err error) {
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "setLocation", map[string]string{
+		"hashes":   strings.Join(hashes, hashListSeparator),
+		"location": location,
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, nil, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+/*
+	set torrent category
+*/
+
+// SetTorrentCategory sets the category for one or more torrents.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#set-torrent-category
+func (c *Client) SetTorrentCategory(ctx context.Context, hashes []string, category string) (err error) {
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "setCategory", map[string]string{
+		"hashes":   strings.Join(hashes, hashListSeparator),
+		"category": category,
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, nil, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+/*
+	get all categories
+*/
+
+// Category represents a torrent category.
+type Category struct {
+	Name     string `json:"name"`     // Category name
+	SavePath string `json:"savePath"` // Category save path
+}
+
+// GetAllCategories returns all categories.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#get-all-categories
+func (c *Client) GetAllCategories(ctx context.Context) (categories map[string]Category, err error) {
+	req, err := c.requestBuild(ctx, "GET", torrentsAPIName, "categories", nil, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	var raw json.RawMessage
+	if err = c.requestExecute(req, &raw, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+		return
+	}
+	if err = json.Unmarshal(raw, &categories); err != nil {
+		err = fmt.Errorf("decoding categories failed: %w", err)
+	}
+	return
+}
+
+/*
+	add new category
+*/
+
+// CreateCategory creates a new category.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#create-category
+func (c *Client) CreateCategory(ctx context.Context, category string, savePath string) (err error) {
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "createCategory", map[string]string{
+		"category": category,
+		"savePath": savePath,
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, nil, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+/*
+	edit category
+*/
+
+// EditCategory edits an existing category.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#edit-category
+func (c *Client) EditCategory(ctx context.Context, category string, savePath string) (err error) {
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "editCategory", map[string]string{
+		"category": category,
+		"savePath": savePath,
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, nil, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+/*
+	remove categories
+*/
+
+// RemoveCategories removes one or more categories.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#remove-categories
+func (c *Client) RemoveCategories(ctx context.Context, categories []string) (err error) {
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "removeCategories", map[string]string{
+		"categories": strings.Join(categories, "\n"),
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, nil, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+/*
+	get all tags
+*/
+
+// GetAllTags returns all tags.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#get-all-tags
+func (c *Client) GetAllTags(ctx context.Context) (tags []string, err error) {
+	req, err := c.requestBuild(ctx, "GET", torrentsAPIName, "tags", nil, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, &tags, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+/*
+	create tags
+*/
+
+// CreateTags creates new tags.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#create-tags
+func (c *Client) CreateTags(ctx context.Context, tags []string) (err error) {
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "createTags", map[string]string{
+		"tags": strings.Join(tags, tagListSeparator),
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, nil, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+/*
+	delete tags
+*/
+
+// DeleteTags deletes one or more tags.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#delete-tags
+func (c *Client) DeleteTags(ctx context.Context, tags []string) (err error) {
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "deleteTags", map[string]string{
+		"tags": strings.Join(tags, tagListSeparator),
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, nil, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+/*
+	add torrent tags
+*/
+
+// AddTorrentTags adds tags to one or more torrents.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#add-torrent-tags
+func (c *Client) AddTorrentTags(ctx context.Context, hashes []string, tags []string) (err error) {
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "addTags", map[string]string{
+		"hashes": strings.Join(hashes, hashListSeparator),
+		"tags":   strings.Join(tags, tagListSeparator),
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, nil, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+/*
+	remove torrent tags
+*/
+
+// RemoveTorrentTags removes tags from one or more torrents.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#remove-torrent-tags
+func (c *Client) RemoveTorrentTags(ctx context.Context, hashes []string, tags []string) (err error) {
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "removeTags", map[string]string{
+		"hashes": strings.Join(hashes, hashListSeparator),
+		"tags":   strings.Join(tags, tagListSeparator),
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, nil, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+/*
+	set torrent name
+*/
+
+// RenameTorrent renames a torrent.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#set-torrent-name
+func (c *Client) RenameTorrent(ctx context.Context, hash string, name string) (err error) {
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "rename", map[string]string{
+		"hash": hash,
+		"name": name,
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, nil, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+/*
+	rename file
+*/
+
+// RenameFile renames a file in a torrent.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#rename-file
+func (c *Client) RenameFile(ctx context.Context, hash string, oldPath string, newPath string) (err error) {
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "renameFile", map[string]string{
+		"hash":    hash,
+		"oldPath": oldPath,
+		"newPath": newPath,
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, nil, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+/*
+	rename folder
+*/
+
+// RenameFolder renames a folder in a torrent.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#rename-folder
+func (c *Client) RenameFolder(ctx context.Context, hash string, oldPath string, newPath string) (err error) {
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "renameFolder", map[string]string{
+		"hash":    hash,
+		"oldPath": oldPath,
+		"newPath": newPath,
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, nil, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+/*
+	set file priority
+*/
+
+// SetFilePriority sets the priority for files in a torrent.
+// https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#set-file-priority
+func (c *Client) SetFilePriority(ctx context.Context, hash string, ids []int, priority int) (err error) {
+	idStrs := make([]string, len(ids))
+	for i, id := range ids {
+		idStrs[i] = strconv.Itoa(id)
+	}
+	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "filePrio", map[string]string{
+		"hash":     hash,
+		"id":       strings.Join(idStrs, hashListSeparator),
+		"priority": strconv.Itoa(priority),
+	}, nil)
+	if err != nil {
+		err = fmt.Errorf("building request failed: %w", err)
+		return
+	}
+	if err = c.requestExecute(req, nil, true); err != nil {
+		err = fmt.Errorf("executing request failed: %w", err)
+	}
+	return
+}
+
+/*
+	new torrents payload helper
+*/
+
 func torrentAddGeneratePayload(files map[string][]byte, urls []*url.URL, options *AddNewTorrentsOptions) (payload bytes.Buffer, contentType string, err error) {
 	mp := multipart.NewWriter(&payload)
 	defer func() {

@@ -456,6 +456,12 @@ Follow this exact flow when adding a public API method:
 
 6. **Update `README.md`**: tick the endpoint in the implementation checklist.
 
+7. **Add integration tests** in the domain's `_test.go` file:
+   - Tests must be part of the existing domain-scoped scenario function (e.g. `TestTorrentsDomain`), not a new top-level `TestXxx` function.
+   - Every mutating action must be followed by a read-back that verifies the change was actually applied on the server (state verification, not just "no error").
+   - Use `t.Skipf` for transient failures (network issues, server config dependencies like queueing disabled).
+   - Clean up any side effects (categories, tags, added torrents) within the same scenario flow.
+
 ## HTTP Internals (request.go)
 
 - `requestBuild(ctx, method, apiName, methodName, parameters, body)` — builds the `*http.Request`. `parameters` is always `map[string]string` (use `nil` when there are no parameters). `body` can be `nil`.

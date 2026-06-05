@@ -180,49 +180,49 @@ If you need more, feel free to open an issue or a PR.
 - [x] Get torrent list
 - [x] Get torrent generic properties
 - [x] Get torrent trackers
-- [ ] Get torrent web seeds
-- [ ] Get torrent contents
-- [ ] Get torrent pieces' states
-- [ ] Get torrent pieces' hashes
-- [ ] Pause torrents
-- [ ] Resume torrents
+- [x] Get torrent web seeds
+- [x] Get torrent contents
+- [x] Get torrent pieces' states
+- [x] Get torrent pieces' hashes
+- [x] Pause torrents
+- [x] Resume torrents
 - [x] Delete torrents
-- [ ] Recheck torrents
-- [ ] Reannounce torrents
-- [ ] Edit trackers
-- [ ] Remove trackers
-- [ ] Add peers
+- [x] Recheck torrents
+- [x] Reannounce torrents
+- [x] Edit trackers
+- [x] Remove trackers
+- [x] Add peers
 - [x] Add new torrent
-- [ ] Add trackers to torrent
-- [ ] Increase torrent priority
-- [ ] Decrease torrent priority
-- [ ] Maximal torrent priority
-- [ ] Minimal torrent priority
-- [ ] Set file priority
-- [ ] Get torrent download limit
-- [ ] Set torrent download limit
-- [ ] Set torrent share limit
-- [ ] Get torrent upload limit
-- [ ] Set torrent upload limit
-- [ ] Set torrent location
-- [ ] Set torrent name
-- [ ] Set torrent category
-- [ ] Get all categories
-- [ ] Add new category
-- [ ] Edit category
-- [ ] Remove categories
-- [ ] Add torrent tags
-- [ ] Remove torrent tags
-- [ ] Get all tags
-- [ ] Create tags
-- [ ] Delete tags
-- [ ] Set automatic torrent management
-- [ ] Toggle sequential download
-- [ ] Set first/last piece priority
-- [ ] Set force start
-- [ ] Set super seeding
-- [ ] Rename file
-- [ ] Rename folder
+- [x] Add trackers to torrent
+- [x] Increase torrent priority
+- [x] Decrease torrent priority
+- [x] Maximal torrent priority
+- [x] Minimal torrent priority
+- [x] Set file priority
+- [x] Get torrent download limit
+- [x] Set torrent download limit
+- [x] Set torrent share limit
+- [x] Get torrent upload limit
+- [x] Set torrent upload limit
+- [x] Set torrent location
+- [x] Set torrent name
+- [x] Set torrent category
+- [x] Get all categories
+- [x] Add new category
+- [x] Edit category
+- [x] Remove categories
+- [x] Add torrent tags
+- [x] Remove torrent tags
+- [x] Get all tags
+- [x] Create tags
+- [x] Delete tags
+- [x] Set automatic torrent management
+- [x] Toggle sequential download
+- [x] Set first/last piece priority
+- [x] Set force start
+- [x] Set super seeding
+- [x] Rename file
+- [x] Rename folder
 
 ### RSS (experimental)
 
