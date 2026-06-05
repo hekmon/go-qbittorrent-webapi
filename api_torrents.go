@@ -105,7 +105,7 @@ func (c *Client) GetTorrentList(ctx context.Context, filters *ListFilters) (list
 	// build request
 	req, err := c.requestBuild(ctx, "GET", torrentsAPIName, "info", preparedFilters, nil)
 	if err != nil {
-		err = fmt.Errorf("request building failure: %w", err)
+		err = fmt.Errorf("building request failed: %w", err)
 		return
 	}
 	// execute request
@@ -215,7 +215,8 @@ func (ti *TorrentInfos) UnmarshalJSON(data []byte) (err error) {
 	ti.ETA = time.Duration(tmp.ETA) * time.Second
 	ti.LastActivity = time.Unix(tmp.LastActivity, 0)
 	if ti.MagnetURI, err = url.Parse(tmp.MagnetURI); err != nil {
-		return fmt.Errorf("failed to parse magnet URI: %w", err)
+		err = fmt.Errorf("parsing magnet URI failed: %w", err)
+		return
 	}
 	ti.MaxSeedingTime = time.Duration(tmp.MaxSeedingTime) * time.Second
 	ti.Reannounce = time.Duration(tmp.Reannounce) * time.Second
@@ -334,7 +335,7 @@ func (c *Client) GetTorrentGenericProperties(ctx context.Context, hash string) (
 		"hash": hash,
 	}, nil)
 	if err != nil {
-		err = fmt.Errorf("request building failure: %w", err)
+		err = fmt.Errorf("building request failed: %w", err)
 		return
 	}
 	// execute request
@@ -506,7 +507,7 @@ func (c *Client) GetTorrentTrackers(ctx context.Context, hash string) (trackers 
 		"hash": hash,
 	}, nil)
 	if err != nil {
-		err = fmt.Errorf("request building failure: %w", err)
+		err = fmt.Errorf("building request failed: %w", err)
 		return
 	}
 	// execute request
@@ -543,7 +544,8 @@ func (tt *TorrentTracker) UnmarshalJSON(data []byte) (err error) {
 	}
 	// Adapt to golang types
 	if tt.URL, err = url.Parse(tmp.URL); err != nil {
-		return fmt.Errorf("failed to parse tracker URL: %w", err)
+		err = fmt.Errorf("parsing tracker URL failed: %w", err)
+		return
 	}
 	return
 }
@@ -602,7 +604,7 @@ func (c *Client) DeleteTorrents(ctx context.Context, hashes []string, deleteFile
 		"deleteFiles": strconv.FormatBool(deleteFiles),
 	}, nil)
 	if err != nil {
-		err = fmt.Errorf("request building failure: %w", err)
+		err = fmt.Errorf("building request failed: %w", err)
 		return
 	}
 	// execute request
@@ -624,7 +626,7 @@ func ReadTorrentsFiles(paths []string) (content map[string][]byte, err error) {
 	for _, path := range paths {
 		var fileContent []byte
 		if fileContent, err = os.ReadFile(path); err != nil {
-			err = fmt.Errorf("unable to read file %q: %w", path, err)
+			err = fmt.Errorf("reading file %q failed: %w", path, err)
 			return
 		}
 		content[filepath.Base(path)] = fileContent
@@ -661,13 +663,13 @@ func (c *Client) AddNewTorrents(ctx context.Context, files map[string][]byte, ur
 	// build payload
 	payload, contentType, err := torrentAddGeneratePayload(files, urls, options)
 	if err != nil {
-		err = fmt.Errorf("payload generation failure: %w", err)
+		err = fmt.Errorf("generating payload failed: %w", err)
 		return
 	}
 	// build request
 	req, err := c.requestBuild(ctx, "POST", torrentsAPIName, "add", nil, &payload)
 	if err != nil {
-		err = fmt.Errorf("request building failure: %w", err)
+		err = fmt.Errorf("building request failed: %w", err)
 		return
 	}
 	req.Header.Set(contentTypeHeader, contentType)
@@ -689,7 +691,7 @@ func torrentAddGeneratePayload(files map[string][]byte, urls []*url.URL, options
 	defer func() {
 		if err == nil {
 			if err = mp.Close(); err != nil {
-				err = fmt.Errorf("failed to close multipart writer: %w", err)
+				err = fmt.Errorf("closing multipart writer failed: %w", err)
 			}
 		}
 	}()
@@ -706,11 +708,11 @@ func torrentAddGeneratePayload(files map[string][]byte, urls []*url.URL, options
 			return
 		}
 		if mpw, err = createBtFormFile(mp, filename); err != nil {
-			err = fmt.Errorf("failed to create form file %s: %w", filename, err)
+			err = fmt.Errorf("creating form file %s failed: %w", filename, err)
 			return
 		}
 		if _, err = mpw.Write(content); err != nil {
-			err = fmt.Errorf("failed to write file %q content: %w", filename, err)
+			err = fmt.Errorf("writing file %q content failed: %w", filename, err)
 			return
 		}
 	}
@@ -758,7 +760,7 @@ func torrentAddGeneratePayload(files map[string][]byte, urls []*url.URL, options
 		strURLs[index] = tURL.String()
 	}
 	if err = mp.WriteField("urls", strings.Join(strURLs, "\n")); err != nil {
-		err = fmt.Errorf("failed to write savepath to form field: %w", err)
+		err = fmt.Errorf("writing urls to form field failed: %w", err)
 		return
 	}
 	// Handles options
@@ -767,85 +769,85 @@ func torrentAddGeneratePayload(files map[string][]byte, urls []*url.URL, options
 	}
 	if options.SavePath != nil {
 		if err = mp.WriteField("savepath", *options.SavePath); err != nil {
-			err = fmt.Errorf("failed to write savepath to form field: %w", err)
+			err = fmt.Errorf("writing savepath to form field failed: %w", err)
 			return
 		}
 	}
 	if options.Category != nil {
 		if err = mp.WriteField("category", *options.Category); err != nil {
-			err = fmt.Errorf("failed to write category to form field: %w", err)
+			err = fmt.Errorf("writing category to form field failed: %w", err)
 			return
 		}
 	}
 	if options.Tags != nil {
 		if err = mp.WriteField("tags", strings.Join(options.Tags, ",")); err != nil {
-			err = fmt.Errorf("failed to write tags to form field: %w", err)
+			err = fmt.Errorf("writing tags to form field failed: %w", err)
 			return
 		}
 	}
 	if options.SkipChecking != nil {
 		if err = mp.WriteField("skip_checking", strconv.FormatBool(*options.SkipChecking)); err != nil {
-			err = fmt.Errorf("failed to write skip_checking to form field: %w", err)
+			err = fmt.Errorf("writing skip_checking to form field failed: %w", err)
 			return
 		}
 	}
 	if options.Paused != nil {
 		if err = mp.WriteField("paused", strconv.FormatBool(*options.Paused)); err != nil {
-			err = fmt.Errorf("failed to write paused to form field: %w", err)
+			err = fmt.Errorf("writing paused to form field failed: %w", err)
 			return
 		}
 	}
 	if options.RootFolder != nil {
 		if err = mp.WriteField("root_folder", strconv.FormatBool(*options.RootFolder)); err != nil {
-			err = fmt.Errorf("failed to write root_folder to form field: %w", err)
+			err = fmt.Errorf("writing root_folder to form field failed: %w", err)
 			return
 		}
 	}
 	if options.Rename != nil {
 		if err = mp.WriteField("rename", *options.Rename); err != nil {
-			err = fmt.Errorf("failed to write rename to form field: %w", err)
+			err = fmt.Errorf("writing rename to form field failed: %w", err)
 			return
 		}
 	}
 	if options.UploadLimit != nil {
 		if err = mp.WriteField("upLimit", strconv.Itoa(options.UploadLimit.ToBytes())); err != nil {
-			err = fmt.Errorf("failed to write upLimit to form field: %w", err)
+			err = fmt.Errorf("writing upLimit to form field failed: %w", err)
 			return
 		}
 	}
 	if options.DownloadLimit != nil {
 		if err = mp.WriteField("dlLimit", strconv.Itoa(options.DownloadLimit.ToBytes())); err != nil {
-			err = fmt.Errorf("failed to write dlLimit to form field: %w", err)
+			err = fmt.Errorf("writing dlLimit to form field failed: %w", err)
 			return
 		}
 	}
 	if options.RatioLimit != nil {
 		if err = mp.WriteField("ratioLimit", strconv.FormatFloat(*options.RatioLimit, 'f', -1, 64)); err != nil {
-			err = fmt.Errorf("failed to write ratioLimit to form field: %w", err)
+			err = fmt.Errorf("writing ratioLimit to form field failed: %w", err)
 			return
 		}
 	}
 	if options.SeedingTimeLimit != nil {
 		if err = mp.WriteField("seedingTimeLimit", strconv.Itoa(int(options.SeedingTimeLimit.Minutes()))); err != nil {
-			err = fmt.Errorf("failed to write seedingTimeLimit to form field: %w", err)
+			err = fmt.Errorf("writing seedingTimeLimit to form field failed: %w", err)
 			return
 		}
 	}
 	if options.AutoTMM != nil {
 		if err = mp.WriteField("autoTMM", strconv.FormatBool(*options.AutoTMM)); err != nil {
-			err = fmt.Errorf("failed to write autoTMM to form field: %w", err)
+			err = fmt.Errorf("writing autoTMM to form field failed: %w", err)
 			return
 		}
 	}
 	if options.SequentialDownload != nil {
 		if err = mp.WriteField("sequentialDownload", strconv.FormatBool(*options.SequentialDownload)); err != nil {
-			err = fmt.Errorf("failed to write sequentialDownload to form field: %w", err)
+			err = fmt.Errorf("writing sequentialDownload to form field failed: %w", err)
 			return
 		}
 	}
 	if options.FirstLastPiecePriority != nil {
 		if err = mp.WriteField("firstLastPiecePrio", strconv.FormatBool(*options.FirstLastPiecePriority)); err != nil {
-			err = fmt.Errorf("failed to write firstLastPiecePrio to form field: %w", err)
+			err = fmt.Errorf("writing firstLastPiecePrio to form field failed: %w", err)
 			return
 		}
 	}

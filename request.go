@@ -74,6 +74,7 @@ func (c *Client) requestBuild(ctx context.Context, method, APIName, APIMethodNam
 	}
 	// build http request
 	if request, err = http.NewRequestWithContext(ctx, method, requestURL.String(), body); err != nil {
+		err = fmt.Errorf("creating HTTP request failed: %w", err)
 		return
 	}
 	request.Header.Set(userAgentHeader, userAgentValue)
@@ -89,7 +90,7 @@ func (c *Client) requestExecute(request *http.Request, output any, autoAuth bool
 	// execute request
 	response, err := c.client.Do(request)
 	if err != nil {
-		err = fmt.Errorf("HTTP request failure: %w", err)
+		err = fmt.Errorf("executing HTTP request failed: %w", err)
 		return
 	}
 	defer response.Body.Close()
@@ -110,7 +111,7 @@ func (c *Client) requestExecute(request *http.Request, output any, autoAuth bool
 		}
 		// reset payload reader & reissue request now that we are authenticated
 		if request.Body, err = request.GetBody(); err != nil {
-			err = fmt.Errorf("can't reset body of original query after successfull autologin: %w", err)
+			err = fmt.Errorf("resetting request body after auto-login failed: %w", err)
 			return
 		}
 		return c.requestExecute(request, output, false)
@@ -129,7 +130,7 @@ func (c *Client) requestExtract(response *http.Response, output any) (err error)
 		return
 	}
 	if reflect.TypeOf(output).Kind() != reflect.Ptr {
-		return InternalError(fmt.Sprintf("output must be a pointer (currentlyu: %v)",
+		return InternalError(fmt.Sprintf("output must be a pointer (currently: %v)",
 			reflect.TypeOf(output)))
 	}
 	// Given the response body content type
@@ -144,7 +145,7 @@ func (c *Client) requestExtract(response *http.Response, output any) (err error)
 		// extract it
 		var bodyData []byte
 		if bodyData, err = io.ReadAll(response.Body); err != nil {
-			err = fmt.Errorf("reading answer body failed: %w", err)
+			err = fmt.Errorf("reading response body failed: %w", err)
 			return
 		}
 		*output.(*string) = string(bodyData)
@@ -160,7 +161,8 @@ func (c *Client) requestExtract(response *http.Response, output any) (err error)
 		}
 		// decode as JSON
 		if err = json.NewDecoder(response.Body).Decode(output); err != nil {
-			return fmt.Errorf("decoding response body as JSON failed: %w", err)
+			err = fmt.Errorf("decoding response body as JSON failed: %w", err)
+			return
 		}
 	default:
 		return InternalError(fmt.Sprintf("%s value '%s' is not supported",

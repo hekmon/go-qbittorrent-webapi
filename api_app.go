@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 )
 
 /*
@@ -69,7 +70,7 @@ func (c *Client) GetBuildInfo(ctx context.Context) (infos BuildInfo, err error) 
 	return
 }
 
-// Shutdown stops the remote server.
+// Shutdown shuts down the remote qBittorrent application.
 // https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#shutdown-application
 func (c *Client) Shutdown(ctx context.Context) (err error) {
 	req, err := c.requestBuild(ctx, "POST", applicationAPIName, "shutdown", nil, nil)
@@ -519,11 +520,42 @@ func (c *Client) GetDefaultSavePath(ctx context.Context) (path string, err error
 // See https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#get-cookies
 // and https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#set-cookies
 type Cookie struct {
-	Name           string `json:"name,omitempty"`
-	Domain         string `json:"domain,omitempty"`
-	Path           string `json:"path,omitempty"`
-	Value          string `json:"value,omitempty"`
-	ExpirationDate int64  `json:"expirationDate,omitempty"`
+	Name           string    `json:"name,omitempty"`
+	Domain         string    `json:"domain,omitempty"`
+	Path           string    `json:"path,omitempty"`
+	Value          string    `json:"value,omitempty"`
+	ExpirationDate time.Time `json:"-"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler to convert the Unix timestamp into a time.Time.
+func (c *Cookie) UnmarshalJSON(data []byte) error {
+	type mask Cookie
+	tmp := struct {
+		*mask
+		ExpirationDate int64 `json:"expirationDate"`
+	}{
+		mask: (*mask)(c),
+	}
+	if err := json.Unmarshal(data, &tmp); err != nil {
+		return err
+	}
+	c.ExpirationDate = time.Unix(tmp.ExpirationDate, 0)
+	return nil
+}
+
+// MarshalJSON implements json.Marshaler to convert the time.Time into a Unix timestamp.
+func (c Cookie) MarshalJSON() ([]byte, error) {
+	type mask Cookie
+	tmp := struct {
+		mask
+		ExpirationDate int64 `json:"expirationDate,omitempty"`
+	}{
+		mask: mask(c),
+	}
+	if !c.ExpirationDate.IsZero() {
+		tmp.ExpirationDate = c.ExpirationDate.Unix()
+	}
+	return json.Marshal(tmp)
 }
 
 // GetCookies returns the cookies that are sent by qBittorrent when downloading .torrent files.

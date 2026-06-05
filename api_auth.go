@@ -25,7 +25,8 @@ func (c *Client) Login(ctx context.Context) (err error) {
 		"password": c.password,
 	}, nil)
 	if err != nil {
-		return fmt.Errorf("building request failed: %w", err)
+		err = fmt.Errorf("building request failed: %w", err)
+		return
 	}
 	// Add custom header for login
 	origin := fmt.Sprintf("%s://%s", c.url.Scheme, c.url.Hostname())
@@ -53,7 +54,8 @@ func (c *Client) Logout(ctx context.Context) (err error) {
 	// Build request
 	req, err := c.requestBuild(ctx, "POST", authenticationAPIName, "logout", nil, nil)
 	if err != nil {
-		return fmt.Errorf("request building failure: %w", err)
+		err = fmt.Errorf("building request failed: %w", err)
+		return
 	}
 	// execute deauth request
 	if err = c.requestExecute(req, nil, false); err != nil {

@@ -26,7 +26,7 @@ func New(apiEndpoint *url.URL, user, password string, customHTTPClient *http.Cli
 	}
 	copiedURL, err := url.Parse(apiEndpoint.String())
 	if err != nil {
-		err = fmt.Errorf("apiEndpoint can't be (re)parsed as URL: %v", err) // weird
+		err = fmt.Errorf("parsing API endpoint URL failed: %w", err)
 		return
 	}
 	// handle http client
@@ -38,6 +38,7 @@ func New(apiEndpoint *url.URL, user, password string, customHTTPClient *http.Cli
 		if customHTTPClient.Jar, err = cookiejar.New(&cookiejar.Options{
 			PublicSuffixList: publicsuffix.List,
 		}); err != nil {
+			err = fmt.Errorf("creating cookie jar failed: %w", err)
 			return
 		}
 	}
