@@ -609,7 +609,6 @@ func (c *Client) GetCookies(ctx context.Context) (cookies []Cookie, err error) {
 }
 
 // SetCookies sets the cookies that are sent by qBittorrent when downloading .torrent files.
-// NOT WORKING FOR NOW.
 // https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)#set-cookies
 func (c *Client) SetCookies(ctx context.Context, cookies []Cookie) (err error) {
 	// First we need to marshal the cookies as json
@@ -620,7 +619,7 @@ func (c *Client) SetCookies(ctx context.Context, cookies []Cookie) (err error) {
 	}
 	// Continue normally
 	req, err := c.requestBuild(ctx, "POST", applicationAPIName, "setCookies", map[string]string{
-		"": string(data),
+		"cookies": string(data),
 	}, nil)
 	if err != nil {
 		err = fmt.Errorf("building request failed: %w", err)

@@ -448,7 +448,7 @@ Follow this exact flow when adding a public API method:
 ## HTTP Internals (request.go)
 
 - `requestBuild(ctx, method, apiName, methodName, parameters, body)` — builds the `*http.Request`. `parameters` is always `map[string]string` (use `nil` when there are no parameters). `body` can be `nil`.
-  - qBittorrent has two special parameter encodings: `parameters[""] = rawJSON` sends the raw JSON without a key, and `parameters["json"] = rawJSON` sends `json=<rawJSON>`. Use these only when the endpoint requires them.
+  - qBittorrent has two special parameter encodings: `parameters["cookies"] = rawJSON` sends `cookies=<rawJSON>`, and `parameters["json"] = rawJSON` sends `json=<rawJSON>`. Use these only when the endpoint requires them.
   - When `parameters` are encoded as a POST body (i.e. method is `POST` and no explicit `body` was provided), `requestBuild` automatically sets `Content-Type: application/x-www-form-urlencoded` and `Content-Length` on the returned request.
   - For multipart uploads (e.g. file upload), build the payload locally into a `bytes.Buffer`, obtain the `Content-Type` from the multipart writer, pass the buffer as `body` to `requestBuild` with `nil` parameters, then manually set `req.Header.Set(contentTypeHeader, contentType)` before calling `requestExecute`.
 - `requestExecute(req, output, autoAuth)` — executes the request. `output` can be `nil` when the caller does not need to read the response body. If `autoAuth` is `true` and a `403` is received, it closes the response body, calls `Login`, resets the request body via `request.GetBody()`, and retries once with `autoAuth = false`. Use `autoAuth = true` for all endpoints except auth-lifecycle methods (e.g. `Logout`) that must not trigger a recursive login.

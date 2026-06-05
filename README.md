@@ -152,7 +152,7 @@ If you need more, feel free to open an issue or a PR.
 - [x] Set application preferences
 - [x] Get default save path
 - [x] Get cookies
-- [x] Set cookies (implemented but not working, expected payload on server side is unclear)
+- [x] Set cookies
 
 ### Log
 

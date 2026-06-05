@@ -40,7 +40,7 @@ func (c *Client) Login(ctx context.Context) (err error) {
 		err = fmt.Errorf("executing request failed: %w", err)
 		return
 	}
-	if output != expectedSuccessResponse {
+	if output != "" && output != expectedSuccessResponse {
 		err = fmt.Errorf("unexpected server response: %s", output)
 		return
 	}

@@ -38,9 +38,9 @@ func (c *Client) requestBuild(ctx context.Context, method, APIName, APIMethodNam
 	if parameters != nil {
 		// some endpoint requires non standard encoding
 		switch {
-		case len(parameters) == 1 && parameters[""] != "":
-			// weird qbittorrent implementation: we need to put the json data without encoding it (set cookies ?)
-			encodedParameters = parameters[""]
+		case len(parameters) == 1 && parameters["cookies"] != "":
+			// weird qbittorrent implementation: we need to put the json data without encoding it (set cookies)
+			encodedParameters = "cookies=" + parameters["cookies"]
 		case len(parameters) == 1 && parameters["json"] != "":
 			// weird qbittorrent implementation: we need to put the json data without encoding it (set app prefs)
 			encodedParameters = "json=" + parameters["json"]
@@ -98,6 +98,9 @@ func (c *Client) requestExecute(request *http.Request, output any, autoAuth bool
 	switch response.StatusCode {
 	case http.StatusOK:
 		// proceed
+	case http.StatusNoContent:
+		// success with no body to extract
+		return nil
 	case http.StatusForbidden:
 		// is this iteration allow to auto login ?
 		if !autoAuth {
