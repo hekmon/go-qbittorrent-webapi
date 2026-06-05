@@ -150,11 +150,11 @@ type TorrentInfos struct {
 	Priority           int           `json:"priority"`           // Torrent priority. Returns -1 if queuing is disabled or torrent is in seed mode
 	Progress           float64       `json:"progress"`           // Torrent progress (percentage/100)
 	Ratio              float64       `json:"ratio"`              // Torrent share ratio. Max ratio value: 9999.
-	RatioLimit         float64       `json:"ratio_limit"`        // TODO (what is different from max_ratio?)
+	RatioLimit         float64       `json:"ratio_limit"`        // Per-torrent configured share ratio limit. -1 means no limit, -2 means use global limit
 	Reannounce         time.Duration `json:"reannounce"`         // Time until the next tracker reannounce
 	SavePath           string        `json:"save_path"`          // Path where this torrent's data is stored
 	SeedingTime        time.Duration `json:"seeding_time"`       // Torrent elapsed time while complete
-	SeedingTimeLimit   time.Duration `json:"seeding_time_limit"` // TODO (what is different from max_seeding_time?)
+	SeedingTimeLimit   time.Duration `json:"seeding_time_limit"` // Per-torrent configured seeding time limit. -1 means no limit, -2 means use global limit
 	SeenComplete       time.Time     `json:"seen_complete"`      // Time when this torrent was last seen complete
 	SequentialDownload bool          `json:"seq_dl"`             // True if sequential download is enabled
 	Size               cunits.Bits   `json:"size"`               // Total size of files selected for download
@@ -189,7 +189,7 @@ func (ti *TorrentInfos) UnmarshalJSON(data []byte) (err error) {
 		MaxSeedingTime     int    `json:"max_seeding_time"`   // Maximum seeding time (seconds) until torrent is stopped from seeding
 		Reannounce         int    `json:"reannounce"`         // Time until the next tracker reannounce
 		SeedingTime        int    `json:"seeding_time"`       // Torrent elapsed time while complete (seconds)
-		SeedingTimeLimit   int    `json:"seeding_time_limit"` // TODO (what is different from max_seeding_time?)
+		SeedingTimeLimit   int    `json:"seeding_time_limit"` // Per-torrent configured seeding time limit (seconds). -1 means no limit, -2 means use global limit
 		SeenComplete       int64  `json:"seen_complete"`      // Time (Unix Epoch) when this torrent was last seen complete
 		Size               int    `json:"size"`               // Total size (bytes) of files selected for download
 		Tags               string `json:"tags"`               // Comma-concatenated tag list of the torrent
@@ -261,7 +261,7 @@ func (ti *TorrentInfos) MarshalJSON() ([]byte, error) {
 		MaxSeedingTime     int    `json:"max_seeding_time"`   // Maximum seeding time (seconds) until torrent is stopped from seeding
 		Reannounce         int    `json:"reannounce"`         // Time until the next tracker reannounce
 		SeedingTime        int    `json:"seeding_time"`       // Torrent elapsed time while complete (seconds)
-		SeedingTimeLimit   int    `json:"seeding_time_limit"` // TODO (what is different from max_seeding_time?)
+		SeedingTimeLimit   int    `json:"seeding_time_limit"` // Per-torrent configured seeding time limit (seconds). -1 means no limit, -2 means use global limit
 		SeenComplete       int64  `json:"seen_complete"`      // Time (Unix Epoch) when this torrent was last seen complete
 		Size               int    `json:"size"`               // Total size (bytes) of files selected for download
 		Tags               string `json:"tags"`               // Comma-concatenated tag list of the torrent

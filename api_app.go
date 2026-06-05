@@ -130,7 +130,7 @@ type ApplicationPreferences struct {
 	Locale                             *string                 `json:"locale,omitempty"`                                 // True if a subfolder should be created when adding a torrent
 	CreateSubfolderEnabled             *bool                   `json:"create_subfolder_enabled,omitempty"`               // True if a subfolder should be created when adding a torrent
 	StartPausedEnabled                 *bool                   `json:"start_paused_enabled,omitempty"`                   // True if torrents should be added in a Paused state
-	AutoDeleteMode                     *int                    `json:"auto_delete_mode,omitempty"`                       // TODO
+	AutoDeleteMode                     *int                    `json:"auto_delete_mode,omitempty"`                       // Auto-delete mode for .torrent files. 0 = Never, 1 = If added, 2 = Always
 	PreallocateAll                     *bool                   `json:"preallocate_all,omitempty"`                        // True if disk space should be pre-allocated for all files
 	IncompleteFilesExt                 *bool                   `json:"incomplete_files_ext,omitempty"`                   // True if ".!qB" should be appended to incomplete files
 	AutoTMMEnabled                     *bool                   `json:"auto_tmm_enabled,omitempty"`                       // True if Automatic Torrent Management is enabled by default
@@ -241,7 +241,7 @@ type ApplicationPreferences struct {
 	WebUICustomHTTPHeaders             *string                 `json:"web_ui_custom_http_headers,omitempty"`             // List of custom http headers
 	MaxSeedingTimeEnabled              *bool                   `json:"max_seeding_time_enabled,omitempty"`               // True enables max seeding time
 	MaxSeedingTime                     *int                    `json:"max_seeding_time,omitempty"`                       // Number of minutes to seed a torrent
-	AnnounceIP                         *string                 `json:"announce_ip,omitempty"`                            // TODO
+	AnnounceIP                         *string                 `json:"announce_ip,omitempty"`                            // IP address reported to trackers. Empty string means automatic detection
 	AnnounceToAllTiers                 *bool                   `json:"announce_to_all_tiers,omitempty"`                  // True always announce to all tiers
 	AnnounceToAllTrackers              *bool                   `json:"announce_to_all_trackers,omitempty"`               // True always announce to all trackers in a tier
 	AsyncIoThreads                     *int                    `json:"async_io_threads,omitempty"`                       // Number of asynchronous I/O threads
